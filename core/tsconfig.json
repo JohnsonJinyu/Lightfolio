@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@lightfolio/shared": [
+        "../shared/dist/index.d.ts"
+      ],
+      "@lightfolio/shared/*": [
+        "../shared/dist/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

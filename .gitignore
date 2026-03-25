@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-electron/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+coverage/
+app/out/
+app/dist/

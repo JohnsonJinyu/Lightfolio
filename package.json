@@ -1,0 +1,19 @@
+{
+  "name": "lightfolio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Windows-first photography portfolio and timeline album built with Electron, React, and TypeScript.",
+  "workspaces": [
+    "app",
+    "core",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w app",
+    "build": "npm run build -w shared && npm run build -w core && npm run build -w app",
+    "typecheck": "npm run build -w shared && npm run typecheck -w core && npm run typecheck -w app"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

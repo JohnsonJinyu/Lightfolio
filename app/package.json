@@ -1,0 +1,29 @@
+{
+  "name": "@lightfolio/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@lightfolio/core": "0.1.0",
+    "@lightfolio/shared": "0.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "electron": "^35.0.2",
+    "electron-vite": "^3.1.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
+  }
+}
