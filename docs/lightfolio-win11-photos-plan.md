@@ -1,0 +1,46 @@
+## Plan: Lightfolio 对标 Win11 照片应用改进计划
+
+以“大图库性能 + 照片应用级浏览体验”作为第一阶段目标，先补齐持久化索引、缩略图缓存、增量查询和渲染层拆分，再在这个底座上补时间轴、详情面板、状态反馈和关键交互。视频本轮按附属内容处理，只保证时间轴可展示与基础占位，不把播放链路纳入第一阶段主线。
+
+**Steps**
+1. Phase 1: 建立数据底座。实现真正的本地库而不是把 ImportSummary 全量放在 React state 中。优先替换 core/src/storage/library.ts 的空实现，定义资产表、标签表、隐藏状态、缩略图缓存元数据，并让启动时可以恢复历史导入结果。这个步骤阻塞后续所有性能与体验改造。
+2. Phase 1: 重构主进程导入链路。拆分 app/src/main/index.ts 中当前混合的扫描、去重、缩略图、IPC 处理逻辑；把目录扫描、去重、元数据提取、缩略图任务拆成独立模块；让“选择目录/文件”和“导入索引构建”分离，避免每次导入都同步阻塞主线程。这个步骤依赖步骤 1。
+3. Phase 1: 引入稳定资产标识与增量导入。把 core/src/indexer/import.ts 里当前基于 source-index-fileName 的 id 生成方式改为基于 path + size + mtime 或内容哈希的稳定键；导入时支持 upsert、跳过未变更文件、只重算变更项。这个步骤依赖步骤 1，可与步骤 2 并行推进接口设计。
+4. Phase 1: 重构 IPC 协议。扩展 app/src/preload/index.ts 与 shared/src/types.ts，新增 loadLibrary、importPaths、getTimelinePage、setHidden、restoreAssets、listFolders、getAssetDetail 等接口与类型，而不是只暴露 pickFiles/pickDirectory/deleteFile/toThumbUrl。这个步骤依赖步骤 1，与步骤 2 并行。
+5. Phase 2: 拆分渲染层架构。把 app/src/renderer/src/App.tsx 里当前数据获取、筛选、选择、导航、右键菜单、瀑布流、详情展示全部拆开，形成 library hook + viewer container + sidebar + detail panel 结构。目标是让 App.tsx 只负责布局和顶层组合，避免继续在单文件堆叠状态。这个步骤依赖步骤 1 和步骤 4。
+6. Phase 2: 补齐时间轴体验。基于已有 TimelineGroup 模型，把“按月分组”真正体现在 UI 中：瀑布流内插入月份分隔、提供月份快速跳转、单图模式显示当前时间位置。这个步骤依赖步骤 5。
+7. Phase 2: 补齐详情与信息密度。围绕 shared/src/types.ts 中已有的 cameraModel、lensModel、location、caption、tags、isFeatured，把右侧详情区做成可稳定承载元数据的面板，至少展示拍摄时间、设备、镜头、路径、标签、说明、精选状态；缺失值用明确占位，不再让 EXIF 只是数据字段。这个步骤依赖步骤 5，可与步骤 6 并行。
+8. Phase 2: 完善加载态、空态和反馈机制。替换当前依赖 confirm、底部文本反馈和隐式失败标记的交互方式，补上导入进度明细、首屏 skeleton、缩略图失败重试、删除/隐藏后的 toast + undo、空库引导、错误原因透出。这个步骤依赖步骤 5，可与步骤 6、7 并行。
+9. Phase 2: 优化浏览手感。重新设计预加载队列、相邻资源预取、滚轮节流、键盘导航和胶片带同步，让翻页、缩略图出现和瀑布流滚动更接近原生照片应用的连续感。这个步骤依赖步骤 5。
+10. Phase 3: 面向 2 万张以上图库做规模化优化。把渲染层从“全量 timeline/filter 后再 slice”改成分页/窗口化查询；把缩略图缓存从当前简单内存 Map + 磁盘文件升级为分层缓存；为目录、时间、隐藏状态建立查询索引；只在可见窗口内请求详情和缩略图。这个步骤依赖步骤 1 到 9。
+11. Phase 3: 重新定义首屏加载策略。应用启动只加载最近时间段与首屏所需缩略图，后台渐进拉取其余月份和文件夹聚合信息，避免在启动时构造整个资产图谱。这个步骤依赖步骤 10。
+12. Phase 3: 视频保持附属能力。继续保留视频资产进入时间轴和详情，但本轮只补封面帧/占位一致性与基础信息，不在这阶段加入完整播放器、音频控制和视频编辑。这个步骤可与步骤 7、10 并行。
+
+**Relevant files**
+- d:/Pan_E/VS_Projects/Lightfolio/app/src/renderer/src/App.tsx — 当前顶层 UI、状态、选择逻辑、瀑布流窗口化与导入后状态重置，后续需要拆分为多个容器与 hooks
+- d:/Pan_E/VS_Projects/Lightfolio/app/src/main/index.ts — 当前混合了协议处理、目录扫描、缩略图生成、导入 IPC 和删除 IPC，是主线程阻塞与职责耦合的核心位置
+- d:/Pan_E/VS_Projects/Lightfolio/app/src/preload/index.ts — 当前桥接接口过薄，需要扩展为真正的库操作协议层
+- d:/Pan_E/VS_Projects/Lightfolio/core/src/indexer/import.ts — 当前负责资产构建、EXIF、月分组和精选故事，后续要改稳定 ID、增量导入和更清晰的数据分层
+- d:/Pan_E/VS_Projects/Lightfolio/core/src/storage/library.ts — 当前为空实现，后续应成为本地库索引与状态持久化入口
+- d:/Pan_E/VS_Projects/Lightfolio/core/src/metadata/exif.ts — 需要评估批量读取策略、缓存策略与失败透传
+- d:/Pan_E/VS_Projects/Lightfolio/shared/src/types.ts — 需要扩充查询、分页、详情、操作结果和错误模型，避免前后端协议继续松散增长
+- d:/Pan_E/VS_Projects/Lightfolio/docs/requirements.md — 作为产品边界依据，后续需要补充“时间轴、删除语义、恢复、性能目标、图库规模目标”这些已确认的决策
+
+**Verification**
+1. 数据验证：关闭并重启应用后，已导入资源、隐藏状态、恢复列表和当前库内容仍可正确恢复。
+2. 性能验证：在 2 万张以上的测试图库上，首次启动不阻塞窗口创建；滚动瀑布流时无明显白屏；切换相邻图片时缩略图与高清图过渡稳定。
+3. 导入验证：重复导入同一目录时不会生成重复资产；仅变更过的文件会触发重新索引；删除/隐藏/恢复操作能正确持久化。
+4. 体验验证：瀑布流按月份可视分组；单图模式能明确看到拍摄时间与上下文；空态、加载态、失败态均有可理解反馈。
+5. 协议验证：preload 暴露的新接口都有明确返回类型和错误模型；前端不再依赖隐式 null/false 来区分失败原因。
+6. 回归验证：现有的文件导入、目录导入、移动到回收站、缩略图生成和示例内容回退逻辑在重构后仍可工作。
+
+**Decisions**
+- 第一阶段目标是性能与体验并进，不单做视觉层改造。
+- 目标图库规模按 2 万张以上设计，因此不能继续依赖前端全量 state 和一次性全量扫描渲染。
+- 视频本轮按附属内容处理，只保证时间轴兼容和基础展示，不把完整播放链路作为阻塞项。
+- 参考标杆是 Win11 照片应用，但不要求照搬其界面；重点对齐的是启动速度、连续浏览手感、时间轴语义和状态反馈质量。
+
+**Further Considerations**
+1. 存储选型建议优先本地 SQLite，而不是 IndexedDB。原因是 2 万张以上图库更需要稳定索引、可控 schema 和更强查询能力。
+2. 缩略图建议采用两级缓存：内存 LRU 负责当前视口与相邻资源，磁盘缓存负责重启后复用；不要继续维持单层 Map + 文件目录的临时策略。
+3. 若后续准备加入 AI 分类，建议把 AI 结果从 AssetRecord 主表中解耦成可覆盖的扩展表，避免现在就把共享类型做死。
