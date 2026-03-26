@@ -183,14 +183,17 @@ function assetAspectRatio(asset: AssetRecord) {
 }
 
 function filmstripThumbWidth(asset: AssetRecord) {
-  return Math.max(60, Math.min(220, Math.round(filmstripThumbHeight * assetAspectRatio(asset))));
+  return Math.max(88, Math.min(260, Math.round(filmstripThumbHeight * assetAspectRatio(asset))));
 }
 
 const fileUrlCache = new Map<string, string | null>();
 const waterfallMinTileWidth = 208;
 const waterfallGap = 10;
-const filmstripThumbHeight = 68;
-type DetailSectionKey = 'actions' | 'description' | 'tags' | 'fileInfo';
+const filmstripThumbHeight = 92;
+const contextMenuWidth = 248;
+const contextMenuHeight = 168;
+const contextMenuViewportPadding = 12;
+type DetailSectionKey = 'description' | 'tags' | 'fileInfo';
 
 function isAbsoluteFilePath(filePath: string) {
   return /^[a-zA-Z]:[\\/]/.test(filePath) || filePath.startsWith('\\\\') || filePath.startsWith('/');
@@ -214,6 +217,16 @@ function getFileUrlCached(filePath: string, mode: 'full' | 'thumb', size = 480) 
 
   fileUrlCache.set(key, url);
   return url;
+}
+
+function clampContextMenuPosition(x: number, y: number) {
+  const maxX = Math.max(contextMenuViewportPadding, window.innerWidth - contextMenuWidth - contextMenuViewportPadding);
+  const maxY = Math.max(contextMenuViewportPadding, window.innerHeight - contextMenuHeight - contextMenuViewportPadding);
+
+  return {
+    x: Math.min(Math.max(contextMenuViewportPadding, x), maxX),
+    y: Math.min(Math.max(contextMenuViewportPadding, y), maxY)
+  };
 }
 
 function preloadImage(filePath: string, mode: 'full' | 'thumb', size = 480) {
@@ -374,7 +387,6 @@ export function App() {
   const [searchText, setSearchText] = useState('');
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [collapsedDetailSections, setCollapsedDetailSections] = useState<Record<DetailSectionKey, boolean>>({
-    actions: false,
     description: false,
     tags: false,
     fileInfo: false
@@ -1043,9 +1055,11 @@ export function App() {
 
   function openAssetMenu(event: React.MouseEvent, assetId: string) {
     event.preventDefault();
+    const position = clampContextMenuPosition(event.clientX, event.clientY);
+
     setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
+      x: position.x,
+      y: position.y,
       assetId
     });
     selectById(assetId);
@@ -1308,8 +1322,8 @@ export function App() {
             </div>
           ) : selected ? (
             viewMode === 'single' ? (
-              <article className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''}`} onContextMenu={(event) => openAssetMenu(event, selected.id)} onWheel={onSingleWheel}>
-                <div className="viewer-stage">
+              <article className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''}`} onWheel={onSingleWheel}>
+                <div className="viewer-stage" onContextMenu={(event) => openAssetMenu(event, selected.id)}>
                   <div key={selected.id} className={`viewer-media viewer-media-${selected.kind} media-${navDirection}`}>
                     {!failedPreviewIds.has(selected.id) ? (
                       selected.kind === 'image' ? (
@@ -1340,7 +1354,7 @@ export function App() {
                   </div>
                   {!isDetailPanelCollapsed ? (
                     <>
-                      <p className="detail-description">{selected.caption?.body ?? '右键当前作品可执行移除、删除等操作。'}</p>
+                      <p className="detail-description">{selected.caption?.body ?? '右键主图或下方胶卷缩略图，可执行打开、移除和删除操作。'}</p>
                       <div className="detail-grid">
                         <div className="detail-card">
                           <span>拍摄时间</span>
@@ -1358,21 +1372,6 @@ export function App() {
                           <span>镜头</span>
                           <strong>{selected.lensModel ?? '未读取到镜头信息'}</strong>
                         </div>
-                      </div>
-                      <div className={`detail-section ${collapsedDetailSections.actions ? 'detail-section-collapsed' : ''}`}>
-                        <button className="detail-section-toggle" onClick={() => toggleDetailSection('actions')}>
-                          <span className="detail-section-title">当前作品操作</span>
-                          <span>{collapsedDetailSections.actions ? '展开' : '收起'}</span>
-                        </button>
-                        {!collapsedDetailSections.actions ? (
-                          <div className="detail-section-body">
-                            <div className="detail-actions">
-                              <button className="button button-secondary" onClick={() => void revealInExplorer(selected)}>在资源管理器中打开</button>
-                              <button className="button button-ghost" onClick={() => removeFromAlbum(selected)}>从相册移除</button>
-                              <button className="button button-danger" onClick={() => requestDeleteFromDisk(selected)}>删除到回收站</button>
-                            </div>
-                          </div>
-                        ) : null}
                       </div>
                       <div className={`detail-section ${collapsedDetailSections.description ? 'detail-section-collapsed' : ''}`}>
                         <button className="detail-section-toggle" onClick={() => toggleDetailSection('description')}>
@@ -1533,7 +1532,7 @@ export function App() {
                           asset={asset}
                           className="asset-media media-enter"
                           mode="thumb"
-                          size={256}
+                          size={384}
                           shouldLoad
                           onError={() => markPreviewFailed(asset.id)}
                         />
@@ -1556,10 +1555,10 @@ export function App() {
 
       {contextMenu && contextAsset ? (
         <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-          <button className="context-item" onClick={() => removeFromAlbum(contextAsset)}>从相册移除（不删原文件）</button>
+          <div className="context-menu-title">{contextAsset.caption?.title ?? contextAsset.fileName}</div>
           <button className="context-item" onClick={() => void revealInExplorer(contextAsset)}>在资源管理器中打开</button>
+          <button className="context-item" onClick={() => removeFromAlbum(contextAsset)}>从相册移除</button>
           <button className="context-item context-item-danger" onClick={() => requestDeleteFromDisk(contextAsset)}>删除磁盘文件（回收站）</button>
-          <button className="context-item" onClick={() => setContextMenu(null)}>取消</button>
         </div>
       ) : null}
 
