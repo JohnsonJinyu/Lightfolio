@@ -9,7 +9,7 @@ declare global {
       pickDirectory: () => Promise<ImportSummary | null>;
       deleteFile: (filePath: string) => Promise<boolean>;
       toFileUrl: (filePath: string) => string;
-      loadImageDataUrl: (filePath: string) => Promise<string | null>;
+      toThumbUrl: (filePath: string, width: number, height: number) => string;
     };
   }
 }

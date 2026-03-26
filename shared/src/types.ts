@@ -24,6 +24,8 @@ export interface AssetRecord {
   source: ImportSourceKind;
   filePath: string;
   fileName: string;
+  pixelWidth?: number;
+  pixelHeight?: number;
   capturedAt: string;
   importedAt: string;
   cameraModel?: string;

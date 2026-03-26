@@ -1,8 +1,10 @@
-import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, ipcMain, net, protocol, shell } from 'electron';
 import fs from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { nativeImage } from 'electron';
 
 import { createImportSummary } from '@lightfolio/core';
 
@@ -23,6 +25,127 @@ const supportedExtensions = new Set([
   '.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp',
   '.mp4', '.mov', '.m4v', '.avi', '.webm'
 ]);
+
+const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp']);
+const thumbnailMemoryCache = new Map<string, Buffer>();
+const thumbnailCacheDir = path.join(app.getPath('userData'), 'thumb-cache');
+const maxThumbnailMemoryItems = 256;
+
+function imageSizeForPath(filePath: string) {
+  try {
+    const image = nativeImage.createFromPath(filePath);
+
+    if (image.isEmpty()) {
+      return null;
+    }
+
+    const size = image.getSize();
+    if (!size.width || !size.height) {
+      return null;
+    }
+
+    return size;
+  } catch {
+    return null;
+  }
+}
+
+function toInt(value: string | null, fallback: number) {
+  const parsed = Number.parseInt(value ?? '', 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function rememberThumbnail(key: string, data: Buffer) {
+  thumbnailMemoryCache.set(key, data);
+
+  if (thumbnailMemoryCache.size <= maxThumbnailMemoryItems) {
+    return;
+  }
+
+  const first = thumbnailMemoryCache.keys().next().value;
+  if (first) {
+    thumbnailMemoryCache.delete(first);
+  }
+}
+
+async function loadThumbnailBuffer(filePath: string, width: number, height: number) {
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (!imageExtensions.has(extension)) {
+    return null;
+  }
+
+  let stats;
+  try {
+    stats = await fs.stat(filePath);
+  } catch {
+    return null;
+  }
+
+  const keySource = `${filePath}|${stats.size}|${Math.trunc(stats.mtimeMs)}|${width}|${height}`;
+  const key = crypto.createHash('sha1').update(keySource).digest('hex');
+  const inMemory = thumbnailMemoryCache.get(key);
+
+  if (inMemory) {
+    return inMemory;
+  }
+
+  try {
+    await fs.mkdir(thumbnailCacheDir, { recursive: true });
+    const thumbnailPath = path.join(thumbnailCacheDir, `${key}.png`);
+
+    try {
+      const diskBuffer = await fs.readFile(thumbnailPath);
+      rememberThumbnail(key, diskBuffer);
+      return diskBuffer;
+    } catch {
+      // continue building thumbnail
+    }
+
+    const image = nativeImage.createFromPath(filePath);
+    const originalSize = image.getSize();
+
+    if (image.isEmpty() || !originalSize.width || !originalSize.height) {
+      return null;
+    }
+
+    const scale = Math.min(width / originalSize.width, height / originalSize.height);
+    const targetWidth = Math.max(1, Math.round(originalSize.width * scale));
+    const targetHeight = Math.max(1, Math.round(originalSize.height * scale));
+
+    const buffer = image
+      .resize({ width: targetWidth, height: targetHeight, quality: 'good' })
+      .toPNG();
+
+    await fs.writeFile(thumbnailPath, buffer);
+    rememberThumbnail(key, buffer);
+    return buffer;
+  } catch {
+    return null;
+  }
+}
+
+function enrichImportSummaryWithDimensions<T extends { assets: Array<{ kind: string; filePath: string; pixelWidth?: number; pixelHeight?: number }> }>(summary: T) {
+  for (const asset of summary.assets) {
+    if (asset.kind !== 'image') {
+      continue;
+    }
+
+    const size = imageSizeForPath(asset.filePath);
+
+    if (!size) {
+      continue;
+    }
+
+    asset.pixelWidth = size.width;
+    asset.pixelHeight = size.height;
+  }
+
+  return summary;
+}
 
 async function scanDirectoryForMedia(rootDirectory: string) {
   const pendingDirectories = [rootDirectory];
@@ -108,6 +231,7 @@ function createMainWindow() {
     minHeight: 760,
     backgroundColor: '#f4ede3',
     titleBarStyle: 'hiddenInset',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),
       sandbox: false,
@@ -117,6 +241,7 @@ function createMainWindow() {
   });
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.setMenuBarVisibility(false);
 
   if (process.env.ELECTRON_RENDERER_URL) {
     window.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -126,12 +251,34 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+
   protocol.handle('lightfolio-media', (request) => {
     const requestUrl = new URL(request.url);
     const filePath = requestUrl.searchParams.get('path');
+    const thumb = requestUrl.searchParams.get('thumb') === '1';
+    const thumbWidth = toInt(requestUrl.searchParams.get('w'), 480);
+    const thumbHeight = toInt(requestUrl.searchParams.get('h'), 480);
 
     if (!filePath) {
       return new Response('Missing file path.', { status: 400 });
+    }
+
+    if (thumb) {
+      return loadThumbnailBuffer(filePath, thumbWidth, thumbHeight)
+        .then((buffer) => {
+          if (!buffer) {
+            return new Response('Unable to generate thumbnail.', { status: 404 });
+          }
+
+          return new Response(buffer, {
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+              'cache-control': 'public, max-age=86400'
+            }
+          });
+        });
     }
 
     return net.fetch(pathToFileURL(filePath).toString());
@@ -153,7 +300,8 @@ app.whenReady().then(() => {
     }
 
     const dedupedPaths = await dedupeImportPaths(result.filePaths);
-    return createImportSummary(dedupedPaths, 'files');
+    const summary = await createImportSummary(dedupedPaths, 'files');
+    return enrichImportSummaryWithDimensions(summary);
   });
 
   ipcMain.handle('library:pick-directory', async () => {
@@ -168,7 +316,8 @@ app.whenReady().then(() => {
     const directory = result.filePaths[0];
     const scannedPaths = await scanDirectoryForMedia(directory);
     const dedupedPaths = await dedupeImportPaths(scannedPaths);
-    return createImportSummary(dedupedPaths, 'directory');
+    const summary = await createImportSummary(dedupedPaths, 'directory');
+    return enrichImportSummaryWithDimensions(summary);
   });
 
   ipcMain.handle('library:delete-file', async (_event, filePath: string) => {
