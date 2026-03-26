@@ -64,3 +64,24 @@ export interface ImportSummary {
   timeline: TimelineGroup[];
   story: CuratedStory;
 }
+
+export interface LibraryViewState {
+  selectedAssetId: string | null;
+  activeFolder: string;
+  viewMode: 'single' | 'waterfall';
+  searchText: string;
+  showFeaturedOnly: boolean;
+  isSidebarCollapsed: boolean;
+  isFolderListCollapsed: boolean;
+  isDetailPanelCollapsed: boolean;
+  isFilmstripCollapsed: boolean;
+}
+
+export interface LibrarySnapshot {
+  version: number;
+  importState: ImportSummary | null;
+  hiddenAssetIds: string[];
+  removedFromAlbumIds: string[];
+  uiState?: LibraryViewState;
+  updatedAt: string;
+}

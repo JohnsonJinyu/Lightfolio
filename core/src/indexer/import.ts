@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import path from 'node:path';
 
 import type {
   AssetCaption,
   AssetKind,
   AssetRecord,
+  ImportSummary,
   ImportSourceKind,
   TimelineGroup
 } from '@lightfolio/shared';
@@ -47,6 +49,19 @@ function titleFromName(fileName: string): string {
   return fileName.replace(path.extname(fileName), '').replace(/[\-_]+/g, ' ').trim();
 }
 
+async function createAssetId(filePath: string) {
+  const normalizedPath = path.normalize(filePath).toLowerCase();
+
+  try {
+    const stats = await fs.stat(filePath);
+    const fingerprint = `${normalizedPath}|${stats.size}|${Math.trunc(stats.mtimeMs)}`;
+
+    return `asset-${crypto.createHash('sha1').update(fingerprint).digest('hex').slice(0, 16)}`;
+  } catch {
+    return `asset-${crypto.createHash('sha1').update(normalizedPath).digest('hex').slice(0, 16)}`;
+  }
+}
+
 async function resolveCapturedAt(filePath: string, exifCapturedAt: string | undefined, importedAt: string) {
   if (exifCapturedAt) {
     return exifCapturedAt;
@@ -87,11 +102,12 @@ export async function createImportSummary(paths: string[], source: ImportSourceK
       }
 
       const fileName = path.basename(filePath);
+      const assetId = await createAssetId(filePath);
       const exif = kind === 'image' ? await readExifSnapshot(filePath) : {};
       const capturedAt = await resolveCapturedAt(filePath, exif.capturedAt, importedAt);
 
       return {
-        id: `${source}-${index}-${fileName}`,
+        id: assetId,
         kind,
         source,
         filePath,
@@ -104,8 +120,8 @@ export async function createImportSummary(paths: string[], source: ImportSourceK
           label: '待手动标记地点'
         },
         tags: [
-          { id: `${index}-tag-timeline`, label: '时间轴' },
-          { id: `${index}-tag-featured`, label: index < 3 ? '精选' : '归档' }
+          { id: `${assetId}-tag-timeline`, label: '时间轴' },
+          { id: `${assetId}-tag-featured`, label: index < 3 ? '精选' : '归档' }
         ],
         caption: defaultCaptions[index % defaultCaptions.length],
         isFeatured: index < 4
@@ -160,4 +176,31 @@ export function createCuratedStory(assets: AssetRecord[]) {
       body: asset.caption?.body ?? '为图片、视频和文字保留共同出现的位置。'
     }))
   };
+}
+
+export function mergeImportSummaries(current: ImportSummary | null, incoming: ImportSummary) {
+  if (!current) {
+    return incoming;
+  }
+
+  const assetMap = new Map<string, AssetRecord>();
+
+  for (const asset of current.assets) {
+    assetMap.set(asset.id, asset);
+  }
+
+  for (const asset of incoming.assets) {
+    assetMap.set(asset.id, asset);
+  }
+
+  const assets = Array.from(assetMap.values()).sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+  const pickedPaths = Array.from(new Set([...current.pickedPaths, ...incoming.pickedPaths]));
+
+  return {
+    source: incoming.source,
+    pickedPaths,
+    assets,
+    timeline: groupAssetsByMonth(assets),
+    story: createCuratedStory(assets)
+  } satisfies ImportSummary;
 }

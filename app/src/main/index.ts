@@ -6,7 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { nativeImage } from 'electron';
 
-import { createImportSummary } from '@lightfolio/core';
+import { createImportSummary, createStorageAdapter } from '@lightfolio/core';
+import type { LibrarySnapshot } from '@lightfolio/shared';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -251,7 +252,13 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  const libraryStorage = createStorageAdapter({
+    filePath: path.join(app.getPath('userData'), 'library-state.json')
+  });
+
   Menu.setApplicationMenu(null);
+
+  void libraryStorage.initialize();
 
   protocol.handle('lightfolio-media', (request) => {
     const requestUrl = new URL(request.url);
@@ -271,7 +278,7 @@ app.whenReady().then(() => {
             return new Response('Unable to generate thumbnail.', { status: 404 });
           }
 
-          return new Response(buffer, {
+          return new Response(new Uint8Array(buffer), {
             status: 200,
             headers: {
               'content-type': 'image/png',
@@ -320,6 +327,15 @@ app.whenReady().then(() => {
     return enrichImportSummaryWithDimensions(summary);
   });
 
+  ipcMain.handle('library:load', async () => {
+    return libraryStorage.load();
+  });
+
+  ipcMain.handle('library:save', async (_event, snapshot: LibrarySnapshot) => {
+    await libraryStorage.save(snapshot);
+    return true;
+  });
+
   ipcMain.handle('library:delete-file', async (_event, filePath: string) => {
     if (!filePath || typeof filePath !== 'string') {
       return false;
@@ -328,6 +344,20 @@ app.whenReady().then(() => {
     try {
       await fs.access(filePath);
       await shell.trashItem(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('library:reveal-file', async (_event, filePath: string) => {
+    if (!filePath || typeof filePath !== 'string') {
+      return false;
+    }
+
+    try {
+      await fs.access(filePath);
+      shell.showItemInFolder(filePath);
       return true;
     } catch {
       return false;

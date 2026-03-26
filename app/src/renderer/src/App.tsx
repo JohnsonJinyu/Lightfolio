@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AssetRecord, ImportSummary, TimelineGroup } from '@lightfolio/shared';
+import type { AssetRecord, ImportSummary, LibrarySnapshot, TimelineGroup } from '@lightfolio/shared';
 
 const bootTimeline: TimelineGroup[] = [
   {
@@ -57,8 +57,73 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
 function latestAsset(groups: TimelineGroup[]): AssetRecord | null {
   return groups.flatMap((group) => group.assets)[0] ?? null;
+}
+
+function mergeImportSummaries(current: ImportSummary | null, incoming: ImportSummary) {
+  if (!current) {
+    return incoming;
+  }
+
+  const assetMap = new Map<string, AssetRecord>();
+
+  for (const asset of current.assets) {
+    assetMap.set(asset.id, asset);
+  }
+
+  for (const asset of incoming.assets) {
+    assetMap.set(asset.id, asset);
+  }
+
+  const assets = Array.from(assetMap.values()).sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+  const grouped = new Map<string, AssetRecord[]>();
+
+  for (const asset of assets) {
+    const key = asset.capturedAt.slice(0, 7);
+    const collection = grouped.get(key) ?? [];
+    collection.push(asset);
+    grouped.set(key, collection);
+  }
+
+  const timeline = Array.from(grouped.entries())
+    .sort((left, right) => right[0].localeCompare(left[0]))
+    .map(([key, groupAssets]) => ({
+      id: key,
+      label: key.replace('-', ' / '),
+      coverTitle: (groupAssets[0]?.caption?.title ?? groupAssets[0]?.fileName ?? '未命名作品').replace(/\.[^.]+$/, ''),
+      assets: groupAssets.sort((left, right) => right.capturedAt.localeCompare(left.capturedAt))
+    }));
+
+  const featured = assets.filter((asset) => asset.isFeatured).slice(0, 3);
+
+  return {
+    source: incoming.source,
+    pickedPaths: Array.from(new Set([...current.pickedPaths, ...incoming.pickedPaths])),
+    assets,
+    timeline,
+    story: {
+      id: 'story-featured',
+      title: '本期精选画册',
+      summary: '把导入的作品重新编排为适合安静观看的一段视觉章节。',
+      blocks: featured.map((asset, index) => ({
+        id: asset.id,
+        eyebrow: `章节 ${String(index + 1).padStart(2, '0')}`,
+        title: asset.caption?.title ?? asset.fileName.replace(/\.[^.]+$/, ''),
+        body: asset.caption?.body ?? '为图片、视频和文字保留共同出现的位置。'
+      }))
+    }
+  } satisfies ImportSummary;
 }
 
 function filterTimeline(groups: TimelineGroup[], hiddenAssetIds: Set<string>): TimelineGroup[] {
@@ -122,9 +187,10 @@ function filmstripThumbWidth(asset: AssetRecord) {
 }
 
 const fileUrlCache = new Map<string, string | null>();
-const waterfallMinTileWidth = 220;
+const waterfallMinTileWidth = 208;
 const waterfallGap = 10;
-const filmstripThumbHeight = 92;
+const filmstripThumbHeight = 68;
+type DetailSectionKey = 'actions' | 'description' | 'tags' | 'fileInfo';
 
 function isAbsoluteFilePath(filePath: string) {
   return /^[a-zA-Z]:[\\/]/.test(filePath) || filePath.startsWith('\\\\') || filePath.startsWith('/');
@@ -292,6 +358,7 @@ function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onErro
 export function App() {
   const [importState, setImportState] = useState<ImportSummary | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isLibraryReady, setIsLibraryReady] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [hiddenAssetIds, setHiddenAssetIds] = useState<Set<string>>(new Set());
   const [removedFromAlbumIds, setRemovedFromAlbumIds] = useState<string[]>([]);
@@ -302,16 +369,30 @@ export function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; assetId: string } | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isFolderListCollapsed, setIsFolderListCollapsed] = useState(false);
+  const [isDetailPanelCollapsed, setIsDetailPanelCollapsed] = useState(false);
+  const [isFilmstripCollapsed, setIsFilmstripCollapsed] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const [collapsedDetailSections, setCollapsedDetailSections] = useState<Record<DetailSectionKey, boolean>>({
+    actions: false,
+    description: false,
+    tags: false,
+    fileInfo: false
+  });
   const [navDirection, setNavDirection] = useState<'forward' | 'backward' | 'none'>('none');
   const [warmupProgress, setWarmupProgress] = useState<{ done: number; total: number; running: boolean }>({ done: 0, total: 0, running: false });
+  const [toast, setToast] = useState<{ message: string; actionLabel?: string; action?: () => void; tone?: 'info' | 'danger' } | null>(null);
+  const [pendingDeleteAsset, setPendingDeleteAsset] = useState<AssetRecord | null>(null);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const wheelLockUntilRef = useRef(0);
   const holdTimerRef = useRef<number | null>(null);
   const holdKeyRef = useRef<string | null>(null);
   const filmstripTrackRef = useRef<HTMLDivElement | null>(null);
   const waterfallRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [waterfallMetrics, setWaterfallMetrics] = useState({ width: 0, height: 0, scrollTop: 0 });
 
-  const sourceTimeline = importState?.timeline ?? bootTimeline;
+  const sourceTimeline = importState?.timeline ?? (isLibraryReady ? [] : bootTimeline);
   const timeline = filterTimeline(sourceTimeline, hiddenAssetIds);
   const assetMap = collectAssetMap(sourceTimeline);
   const visibleAssets = useMemo(() => timeline.flatMap((group) => group.assets), [timeline]);
@@ -328,12 +409,36 @@ export function App() {
       .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
   }, [visibleAssets]);
   const filteredAssets = useMemo(() => {
-    if (activeFolder === 'all') {
-      return visibleAssets;
+    let nextAssets = visibleAssets;
+
+    if (activeFolder !== 'all') {
+      nextAssets = nextAssets.filter((asset) => folderFromPath(asset.filePath) === activeFolder);
     }
 
-    return visibleAssets.filter((asset) => folderFromPath(asset.filePath) === activeFolder);
-  }, [activeFolder, visibleAssets]);
+    if (showFeaturedOnly) {
+      nextAssets = nextAssets.filter((asset) => asset.isFeatured);
+    }
+
+    const normalizedQuery = searchText.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return nextAssets;
+    }
+
+    return nextAssets.filter((asset) => {
+      const haystacks = [
+        asset.fileName,
+        asset.caption?.title,
+        asset.caption?.body,
+        asset.cameraModel,
+        asset.lensModel,
+        asset.location?.label,
+        ...asset.tags.map((tag) => tag.label)
+      ];
+
+      return haystacks.some((value) => value?.toLowerCase().includes(normalizedQuery));
+    });
+  }, [activeFolder, searchText, showFeaturedOnly, visibleAssets]);
   const selected = selectedAssetId
     ? filteredAssets.find((asset) => asset.id === selectedAssetId) ?? filteredAssets[0] ?? null
     : filteredAssets[0] ?? null;
@@ -345,6 +450,10 @@ export function App() {
   const totalAssets = visibleAssets.length;
   const activeSource = importState?.source === 'directory' ? '目录导入' : importState?.source === 'files' ? '文件导入' : '示例内容';
   const folderSequence = useMemo(() => ['all', ...folderItems.map((item) => item.path)], [folderItems]);
+  const isViewerLoading = !isLibraryReady || (isBusy && !importState);
+  const hasActiveFilters = activeFolder !== 'all' || showFeaturedOnly || Boolean(searchText.trim());
+  const selectedFolderLabel = selected ? folderLabel(folderFromPath(selected.filePath)) : '未选择';
+  const detailTags = selected?.tags ?? [];
 
   const waterfallLayout = useMemo(() => {
     const width = Math.max(0, waterfallMetrics.width);
@@ -373,7 +482,6 @@ export function App() {
     () => filteredAssets.slice(waterfallLayout.startIndex, waterfallLayout.endIndex),
     [filteredAssets, waterfallLayout.endIndex, waterfallLayout.startIndex]
   );
-
   const selectByIndex = useCallback((nextIndex: number) => {
     if (filteredAssets.length === 0) {
       return;
@@ -422,6 +530,95 @@ export function App() {
   }, [failedPreviewIds, filteredAssets]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    setIsBusy(true);
+
+    void window.lightfolio.loadLibrary()
+      .then((snapshot) => {
+        if (cancelled) {
+          return;
+        }
+
+        setImportState(snapshot.importState);
+        setHiddenAssetIds(new Set(snapshot.hiddenAssetIds));
+        setRemovedFromAlbumIds(snapshot.removedFromAlbumIds);
+        setSelectedAssetId(
+          snapshot.uiState?.selectedAssetId
+          ?? snapshot.importState?.assets.find((asset) => !snapshot.hiddenAssetIds.includes(asset.id))?.id
+          ?? snapshot.importState?.assets[0]?.id
+          ?? null
+        );
+        setActiveFolder(snapshot.uiState?.activeFolder ?? 'all');
+        setViewMode(snapshot.uiState?.viewMode ?? 'single');
+        setSearchText(snapshot.uiState?.searchText ?? '');
+        setShowFeaturedOnly(snapshot.uiState?.showFeaturedOnly ?? false);
+        setIsSidebarCollapsed(snapshot.uiState?.isSidebarCollapsed ?? false);
+        setIsFolderListCollapsed(snapshot.uiState?.isFolderListCollapsed ?? false);
+        setIsDetailPanelCollapsed(snapshot.uiState?.isDetailPanelCollapsed ?? false);
+        setIsFilmstripCollapsed(snapshot.uiState?.isFilmstripCollapsed ?? false);
+        setFailedPreviewIds(new Set());
+
+        if (snapshot.importState?.assets.length) {
+          void warmupThumbnails(snapshot.importState.assets, 60);
+        }
+      })
+      .finally(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setIsBusy(false);
+        setIsLibraryReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLibraryReady) {
+      return;
+    }
+
+    const snapshot: LibrarySnapshot = {
+      version: 1,
+      importState,
+      hiddenAssetIds: Array.from(hiddenAssetIds),
+      removedFromAlbumIds,
+      uiState: {
+        selectedAssetId,
+        activeFolder,
+        viewMode,
+        searchText,
+        showFeaturedOnly,
+        isSidebarCollapsed,
+        isFolderListCollapsed,
+        isDetailPanelCollapsed,
+        isFilmstripCollapsed
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    void window.lightfolio.saveLibrary(snapshot);
+  }, [activeFolder, hiddenAssetIds, importState, isDetailPanelCollapsed, isFilmstripCollapsed, isFolderListCollapsed, isLibraryReady, isSidebarCollapsed, removedFromAlbumIds, searchText, selectedAssetId, showFeaturedOnly, viewMode]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToast(null);
+    }, 3800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toast]);
+
+  useEffect(() => {
     if (activeFolder !== 'all' && !folderItems.some((item) => item.path === activeFolder)) {
       setActiveFolder('all');
     }
@@ -459,6 +656,63 @@ export function App() {
       window.removeEventListener('scroll', closeMenu, true);
     };
   }, [contextMenu]);
+
+  useEffect(() => {
+    function onGlobalKeyDown(event: KeyboardEvent) {
+      if (event.key === '?') {
+        event.preventDefault();
+        setShowShortcutHelp((previous) => !previous);
+        return;
+      }
+
+      if (event.key === '/') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'f') {
+        const target = event.target as HTMLElement | null;
+
+        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
+          return;
+        }
+
+        event.preventDefault();
+        setShowFeaturedOnly((previous) => !previous);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (pendingDeleteAsset) {
+          setPendingDeleteAsset(null);
+          return;
+        }
+
+        if (showShortcutHelp) {
+          setShowShortcutHelp(false);
+          return;
+        }
+
+        if (contextMenu) {
+          setContextMenu(null);
+          return;
+        }
+
+        if (searchText) {
+          setSearchText('');
+          return;
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onGlobalKeyDown);
+    };
+  }, [contextMenu, pendingDeleteAsset, searchText, showShortcutHelp]);
 
   useEffect(() => {
     if (viewMode !== 'single') {
@@ -585,6 +839,7 @@ export function App() {
   async function runImport(mode: 'files' | 'directory') {
     setIsBusy(true);
     setDeleteFeedback(null);
+    setToast(null);
     setWarmupProgress({ done: 0, total: 0, running: false });
 
     try {
@@ -593,14 +848,22 @@ export function App() {
         : await window.lightfolio.pickDirectory();
 
       if (summary) {
-        setImportState(summary);
-        setHiddenAssetIds(new Set());
-        setRemovedFromAlbumIds([]);
+        const mergedSummary = mergeImportSummaries(importState, summary);
+        const availableIds = new Set(mergedSummary.assets.map((asset) => asset.id));
+
+        setImportState(mergedSummary);
+        setHiddenAssetIds((previous) => new Set(Array.from(previous).filter((assetId) => availableIds.has(assetId))));
+        setRemovedFromAlbumIds((previous) => previous.filter((assetId) => availableIds.has(assetId)));
         setSelectedAssetId(summary.assets[0]?.id ?? null);
         setNavDirection('none');
         setFailedPreviewIds(new Set());
         setActiveFolder('all');
+        setSearchText('');
         void warmupThumbnails(summary.assets);
+        setToast({
+          message: `已导入 ${summary.assets.length} 个资源，当前相册共有 ${mergedSummary.assets.length} 个资源。`,
+          tone: 'info'
+        });
       }
     } finally {
       setIsBusy(false);
@@ -637,15 +900,17 @@ export function App() {
 
     setSelectedAssetId(null);
     setDeleteFeedback(`已从相册隐藏 ${asset.fileName}，原文件仍保留在磁盘中。`);
+    setToast({
+      message: `已从相册隐藏 ${asset.fileName}`,
+      actionLabel: '撤销',
+      action: () => restoreAsset(asset.id),
+      tone: 'info'
+    });
   }
 
-  async function deleteFromDisk(asset: AssetRecord) {
+  async function confirmDeleteFromDisk(asset: AssetRecord) {
+    setPendingDeleteAsset(null);
     setContextMenu(null);
-    const approved = window.confirm(`将 ${asset.fileName} 移动到系统回收站？该操作会影响磁盘源文件。`);
-
-    if (!approved) {
-      return;
-    }
 
     setIsBusy(true);
     setDeleteFeedback(null);
@@ -663,12 +928,25 @@ export function App() {
         setRemovedFromAlbumIds((previous) => previous.filter((item) => item !== asset.id));
         setSelectedAssetId(null);
         setDeleteFeedback(`已将 ${asset.fileName} 移动到系统回收站。`);
+        setToast({
+          message: `${asset.fileName} 已移入回收站。`,
+          tone: 'danger'
+        });
       } else {
         setDeleteFeedback(`删除失败：无法处理 ${asset.fileName}。`);
+        setToast({
+          message: `删除失败：无法处理 ${asset.fileName}`,
+          tone: 'danger'
+        });
       }
     } finally {
       setIsBusy(false);
     }
+  }
+
+  function requestDeleteFromDisk(asset: AssetRecord) {
+    setContextMenu(null);
+    setPendingDeleteAsset(asset);
   }
 
   function restoreAsset(assetId: string) {
@@ -681,6 +959,10 @@ export function App() {
     setRemovedFromAlbumIds((previous) => previous.filter((item) => item !== assetId));
     selectById(assetId);
     setDeleteFeedback(null);
+    setToast({
+      message: '已恢复到相册。',
+      tone: 'info'
+    });
   }
 
   function restoreAllFromAlbum() {
@@ -700,6 +982,63 @@ export function App() {
 
     setRemovedFromAlbumIds([]);
     setDeleteFeedback(null);
+    setToast({
+      message: `已恢复 ${removedFromAlbumIds.length} 个资源。`,
+      tone: 'info'
+    });
+  }
+
+  function retryFailedPreviews() {
+    if (failedPreviewIds.size === 0) {
+      return;
+    }
+
+    setFailedPreviewIds(new Set());
+
+    if (selected?.kind === 'image') {
+      preloadImage(selected.filePath, 'full');
+      preloadImage(selected.filePath, 'thumb', 960);
+    }
+
+    void warmupThumbnails(filteredAssets, 40);
+    setToast({
+      message: '已重新尝试加载失败的预览。',
+      tone: 'info'
+    });
+  }
+
+  function clearFilters() {
+    setActiveFolder('all');
+    setSearchText('');
+    setShowFeaturedOnly(false);
+    setToast({
+      message: '已清除当前筛选条件。',
+      tone: 'info'
+    });
+  }
+
+  function toggleDetailSection(section: DetailSectionKey) {
+    setCollapsedDetailSections((previous) => ({
+      ...previous,
+      [section]: !previous[section]
+    }));
+  }
+
+  async function revealInExplorer(asset: AssetRecord) {
+    const revealed = await window.lightfolio.revealFile(asset.filePath);
+
+    if (!revealed) {
+      setToast({
+        message: `无法在资源管理器中定位 ${asset.fileName}`,
+        tone: 'danger'
+      });
+      return;
+    }
+
+    setToast({
+      message: `已在资源管理器中定位 ${asset.fileName}`,
+      tone: 'info'
+    });
   }
 
   function openAssetMenu(event: React.MouseEvent, assetId: string) {
@@ -777,8 +1116,8 @@ export function App() {
 
   const contextAsset = contextMenu ? filteredAssets.find((asset) => asset.id === contextMenu.assetId) ?? null : null;
 
-  async function warmupThumbnails(assets: AssetRecord[]) {
-    const imageAssets = assets.filter((asset) => asset.kind === 'image');
+  async function warmupThumbnails(assets: AssetRecord[], maxAssets = 120) {
+    const imageAssets = assets.filter((asset) => asset.kind === 'image').slice(0, maxAssets);
     const total = imageAssets.length;
 
     if (total === 0) {
@@ -822,6 +1161,23 @@ export function App() {
           <p>{activeSource} · {totalAssets} 个资源</p>
         </div>
         <div className="topbar-actions">
+          <div className="search-shell">
+            <input
+              ref={searchInputRef}
+              className="search-input"
+              type="search"
+              placeholder="搜索标题、文件名、标签、设备"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+            />
+          </div>
+          <button className="button button-ghost" onClick={() => setShowShortcutHelp(true)}>快捷键</button>
+          <button
+            className={`button button-ghost ${showFeaturedOnly ? 'button-filter-active' : ''}`}
+            onClick={() => setShowFeaturedOnly((previous) => !previous)}
+          >
+            {showFeaturedOnly ? '只看精选中' : '只看精选'}
+          </button>
           <div className="view-switch">
             <button className={`button button-tab ${viewMode === 'single' ? 'button-tab-active' : ''}`} onClick={() => setViewMode('single')}>
               单图
@@ -867,7 +1223,7 @@ export function App() {
         <div className="sidebar-head">
           <div>
             <h2>照片目录</h2>
-            <span>{folderItems.length} 个目录</span>
+            <span>{folderItems.length} 个目录 · {filteredAssets.length} 个结果</span>
           </div>
           <button className="folder-collapse-toggle" onClick={() => setIsFolderListCollapsed((previous) => !previous)}>
             <span>{isFolderListCollapsed ? '▸' : '▾'}</span>
@@ -912,7 +1268,10 @@ export function App() {
         </div>
         ) : null}
         {previewFailureCount > 0 ? (
-          <p className="hint-line">有 {previewFailureCount} 个文件暂时无法预览，可能是格式或权限问题。</p>
+          <div className="hint-actions">
+            <p className="hint-line">有 {previewFailureCount} 个文件暂时无法预览，可能是格式或权限问题。</p>
+            <button className="button button-ghost button-inline" onClick={retryFailedPreviews}>重新尝试</button>
+          </div>
         ) : null}
         <div className="sidebar-footer">
           <div className="sidebar-import-actions">
@@ -923,25 +1282,170 @@ export function App() {
         </div>
       </aside>
 
-      <main className="content">
+      <main className={`content ${isFilmstripCollapsed ? 'content-filmstrip-collapsed' : ''}`}>
         <section className="viewer">
-          {selected ? (
+          {hasActiveFilters ? (
+            <div className="filter-bar">
+              <div className="filter-summary">
+                <strong>{filteredAssets.length} 个结果</strong>
+                <span>
+                  {activeFolder !== 'all' ? `目录：${folderLabel(activeFolder)} ` : ''}
+                  {showFeaturedOnly ? '精选 ' : ''}
+                  {searchText.trim() ? `搜索：${searchText.trim()}` : ''}
+                </span>
+              </div>
+              <button className="button button-ghost button-inline" onClick={clearFilters}>清除筛选</button>
+            </div>
+          ) : null}
+
+          {isViewerLoading ? (
+            <div className="viewer-loading">
+              <div className="viewer-loading-art" />
+              <div className="viewer-loading-copy">
+                <h3>{isLibraryReady ? '正在整理导入内容' : '正在恢复你的相册'}</h3>
+                <p>{isLibraryReady ? '正在更新预览与缩略图缓存。' : '正在读取上次的导入结果和浏览状态。'}</p>
+              </div>
+            </div>
+          ) : selected ? (
             viewMode === 'single' ? (
-              <article className="viewer-single" onContextMenu={(event) => openAssetMenu(event, selected.id)} onWheel={onSingleWheel}>
-                <div key={selected.id} className={`viewer-media viewer-media-${selected.kind} media-${navDirection}`}>
-                  {!failedPreviewIds.has(selected.id) ? (
-                    selected.kind === 'image' ? (
-                      <ProgressiveSingleImage asset={selected} onError={() => markPreviewFailed(selected.id)} />
-                    ) : (
-                      <div className="video-placeholder detail-media" />
-                    )
-                  ) : null}
+              <article className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''}`} onContextMenu={(event) => openAssetMenu(event, selected.id)} onWheel={onSingleWheel}>
+                <div className="viewer-stage">
+                  <div key={selected.id} className={`viewer-media viewer-media-${selected.kind} media-${navDirection}`}>
+                    {!failedPreviewIds.has(selected.id) ? (
+                      selected.kind === 'image' ? (
+                        <ProgressiveSingleImage asset={selected} onError={() => markPreviewFailed(selected.id)} />
+                      ) : (
+                        <div className="video-placeholder detail-media" />
+                      )
+                    ) : null}
+                  </div>
+                  <div className="viewer-overlay-meta">
+                    <span>{formatDate(selected.capturedAt)}</span>
+                    <strong>{selected.caption?.title ?? selected.fileName}</strong>
+                    <em>{selected.kind === 'video' ? '视频' : '照片'} · {selectedFolderLabel}</em>
+                  </div>
                 </div>
-                <div className="viewer-meta">
-                  <h3>{selected.caption?.title ?? selected.fileName}</h3>
-                  <p>{selected.caption?.body ?? '右键当前照片可进行移除或删除操作。'}</p>
-                  <span>{formatDate(selected.capturedAt)}</span>
-                </div>
+                <aside className={`detail-panel ${isDetailPanelCollapsed ? 'detail-panel-collapsed' : ''}`}>
+                  <div className="detail-panel-header">
+                    <div>
+                      <span className="detail-eyebrow">当前作品</span>
+                      <h3>{selected.caption?.title ?? selected.fileName}</h3>
+                    </div>
+                    <div className="detail-panel-header-actions">
+                      {selected.isFeatured ? <span className="detail-badge">精选</span> : null}
+                      <button className="panel-toggle" onClick={() => setIsDetailPanelCollapsed((previous) => !previous)}>
+                        {isDetailPanelCollapsed ? '展开' : '收起'}
+                      </button>
+                    </div>
+                  </div>
+                  {!isDetailPanelCollapsed ? (
+                    <>
+                      <p className="detail-description">{selected.caption?.body ?? '右键当前作品可执行移除、删除等操作。'}</p>
+                      <div className="detail-grid">
+                        <div className="detail-card">
+                          <span>拍摄时间</span>
+                          <strong>{formatDateTime(selected.capturedAt)}</strong>
+                        </div>
+                        <div className="detail-card">
+                          <span>所在目录</span>
+                          <strong title={folderFromPath(selected.filePath)}>{selectedFolderLabel}</strong>
+                        </div>
+                        <div className="detail-card">
+                          <span>设备</span>
+                          <strong>{selected.cameraModel ?? '未读取到相机信息'}</strong>
+                        </div>
+                        <div className="detail-card">
+                          <span>镜头</span>
+                          <strong>{selected.lensModel ?? '未读取到镜头信息'}</strong>
+                        </div>
+                      </div>
+                      <div className={`detail-section ${collapsedDetailSections.actions ? 'detail-section-collapsed' : ''}`}>
+                        <button className="detail-section-toggle" onClick={() => toggleDetailSection('actions')}>
+                          <span className="detail-section-title">当前作品操作</span>
+                          <span>{collapsedDetailSections.actions ? '展开' : '收起'}</span>
+                        </button>
+                        {!collapsedDetailSections.actions ? (
+                          <div className="detail-section-body">
+                            <div className="detail-actions">
+                              <button className="button button-secondary" onClick={() => void revealInExplorer(selected)}>在资源管理器中打开</button>
+                              <button className="button button-ghost" onClick={() => removeFromAlbum(selected)}>从相册移除</button>
+                              <button className="button button-danger" onClick={() => requestDeleteFromDisk(selected)}>删除到回收站</button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className={`detail-section ${collapsedDetailSections.description ? 'detail-section-collapsed' : ''}`}>
+                        <button className="detail-section-toggle" onClick={() => toggleDetailSection('description')}>
+                          <span className="detail-section-title">作品说明</span>
+                          <span>{collapsedDetailSections.description ? '展开' : '收起'}</span>
+                        </button>
+                        {!collapsedDetailSections.description ? (
+                          <div className="detail-section-body">
+                            <p>{selected.caption?.body ?? '这张作品还没有补充说明。'}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className={`detail-section ${collapsedDetailSections.tags ? 'detail-section-collapsed' : ''}`}>
+                        <button className="detail-section-toggle" onClick={() => toggleDetailSection('tags')}>
+                          <span className="detail-section-title">标签</span>
+                          <span>{collapsedDetailSections.tags ? '展开' : '收起'}</span>
+                        </button>
+                        {!collapsedDetailSections.tags ? (
+                          <div className="detail-section-body">
+                            <div className="detail-tags">
+                              {detailTags.length > 0 ? detailTags.map((tag) => (
+                                <span key={tag.id} className="detail-tag">{tag.label}</span>
+                              )) : <span className="detail-tag detail-tag-muted">暂无标签</span>}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className={`detail-section ${collapsedDetailSections.fileInfo ? 'detail-section-collapsed' : ''}`}>
+                        <button className="detail-section-toggle" onClick={() => toggleDetailSection('fileInfo')}>
+                          <span className="detail-section-title">文件信息</span>
+                          <span>{collapsedDetailSections.fileInfo ? '展开' : '收起'}</span>
+                        </button>
+                        {!collapsedDetailSections.fileInfo ? (
+                          <div className="detail-section-body">
+                            <dl className="detail-list">
+                              <div>
+                                <dt>文件名</dt>
+                                <dd>{selected.fileName}</dd>
+                              </div>
+                              <div>
+                                <dt>导入时间</dt>
+                                <dd>{formatDateTime(selected.importedAt)}</dd>
+                              </div>
+                              <div>
+                                <dt>尺寸</dt>
+                                <dd>{selected.pixelWidth && selected.pixelHeight ? `${selected.pixelWidth} × ${selected.pixelHeight}` : '待补充'}</dd>
+                              </div>
+                              <div>
+                                <dt>地点</dt>
+                                <dd>{selected.location?.label ?? '待手动标记地点'}</dd>
+                              </div>
+                            </dl>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="detail-panel-collapsed-copy">
+                      <div className="detail-card">
+                        <span>拍摄时间</span>
+                        <strong>{formatDate(selected.capturedAt)}</strong>
+                      </div>
+                      <div className="detail-card">
+                        <span>目录</span>
+                        <strong title={folderFromPath(selected.filePath)}>{selectedFolderLabel}</strong>
+                      </div>
+                      <div className="detail-card">
+                        <span>标签</span>
+                        <strong>{detailTags.length > 0 ? `${detailTags.length} 个` : '暂无'}</strong>
+                      </div>
+                    </div>
+                  )}
+                </aside>
               </article>
             ) : (
               <div className="waterfall-grid" ref={waterfallRef}>
@@ -980,7 +1484,10 @@ export function App() {
                         )
                       ) : null}
                     </div>
-                    <p>{asset.caption?.title ?? asset.fileName}</p>
+                    <div className="waterfall-tile-copy">
+                      <p>{asset.caption?.title ?? asset.fileName}</p>
+                      <span>{formatDate(asset.capturedAt)}</span>
+                    </div>
                   </article>
                 );
                 })}
@@ -989,58 +1496,126 @@ export function App() {
             )
           ) : (
             <div className="detail-empty">
-              <p>当前目录没有可展示的作品。</p>
-              <p>可切换左侧目录，或先导入新照片。</p>
+              <p>{importState ? '当前目录没有可展示的作品。' : '还没有导入任何作品。'}</p>
+              <p>{importState ? '可切换左侧目录，或恢复已移除资源。' : '先添加一个目录，Lightfolio 会为你构建时间轴。'}</p>
             </div>
           )}
 
           {deleteFeedback ? <p className="feedback-line">{deleteFeedback}</p> : null}
         </section>
 
-        <section className="filmstrip">
+        <section className={`filmstrip ${isFilmstripCollapsed ? 'filmstrip-collapsed' : ''}`}>
           <div className="filmstrip-head">
-            <h2>胶卷</h2>
-            <span>{filteredAssets.length} 张</span>
+            <div>
+              <h2>胶卷</h2>
+              <span>{filteredAssets.length} 张</span>
+            </div>
+            <button className="panel-toggle" onClick={() => setIsFilmstripCollapsed((previous) => !previous)}>
+              {isFilmstripCollapsed ? '展开' : '收起'}
+            </button>
           </div>
-          <div className="filmstrip-track" ref={filmstripTrackRef} onWheel={onFilmstripWheel}>
-            {filteredAssets.map((asset) => {
-              return (
-              <button
-                key={asset.id}
-                className={`film-thumb ${selected?.id === asset.id ? 'film-thumb-active' : ''}`}
-                onClick={() => selectById(asset.id)}
-                onContextMenu={(event) => openAssetMenu(event, asset.id)}
-                data-asset-id={asset.id}
-                style={{ width: `${filmstripThumbWidth(asset)}px`, height: `${filmstripThumbHeight}px` }}
-              >
-                <div className={`asset-preview asset-preview-${asset.kind}`}>
-                  {!failedPreviewIds.has(asset.id) ? (
-                    asset.kind === 'image' ? (
-                      <ImagePreview
-                        asset={asset}
-                        className="asset-media media-enter"
-                        mode="thumb"
-                        size={256}
-                        shouldLoad
-                        onError={() => markPreviewFailed(asset.id)}
-                      />
-                    ) : (
-                      <div className="video-placeholder" />
-                    )
-                  ) : null}
-                </div>
-              </button>
-            );
-            })}
-          </div>
+          {!isFilmstripCollapsed ? (
+            <div className="filmstrip-track" ref={filmstripTrackRef} onWheel={onFilmstripWheel}>
+              {filteredAssets.map((asset) => {
+                return (
+                <button
+                  key={asset.id}
+                  className={`film-thumb ${selected?.id === asset.id ? 'film-thumb-active' : ''}`}
+                  onClick={() => selectById(asset.id)}
+                  onContextMenu={(event) => openAssetMenu(event, asset.id)}
+                  data-asset-id={asset.id}
+                  style={{ width: `${filmstripThumbWidth(asset)}px`, height: `${filmstripThumbHeight}px` }}
+                >
+                  <div className={`asset-preview asset-preview-${asset.kind}`}>
+                    {!failedPreviewIds.has(asset.id) ? (
+                      asset.kind === 'image' ? (
+                        <ImagePreview
+                          asset={asset}
+                          className="asset-media media-enter"
+                          mode="thumb"
+                          size={256}
+                          shouldLoad
+                          onError={() => markPreviewFailed(asset.id)}
+                        />
+                      ) : (
+                        <div className="video-placeholder" />
+                      )
+                    ) : null}
+                  </div>
+                </button>
+              );
+              })}
+            </div>
+          ) : (
+            <div className="filmstrip-collapsed-summary">
+              <span>{selected ? `当前停留在 ${selectedIndex + 1} / ${filteredAssets.length}` : '没有可浏览的资源'}</span>
+            </div>
+          )}
         </section>
       </main>
 
       {contextMenu && contextAsset ? (
         <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
           <button className="context-item" onClick={() => removeFromAlbum(contextAsset)}>从相册移除（不删原文件）</button>
-          <button className="context-item context-item-danger" onClick={() => void deleteFromDisk(contextAsset)}>删除磁盘文件（回收站）</button>
+          <button className="context-item" onClick={() => void revealInExplorer(contextAsset)}>在资源管理器中打开</button>
+          <button className="context-item context-item-danger" onClick={() => requestDeleteFromDisk(contextAsset)}>删除磁盘文件（回收站）</button>
           <button className="context-item" onClick={() => setContextMenu(null)}>取消</button>
+        </div>
+      ) : null}
+
+      {pendingDeleteAsset ? (
+        <div className="modal-backdrop" onClick={() => setPendingDeleteAsset(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <span className="modal-eyebrow">危险操作确认</span>
+            <h3>将 {pendingDeleteAsset.fileName} 移动到系统回收站？</h3>
+            <p>这个操作会影响磁盘中的原始文件。若只是不想在 Lightfolio 中显示它，建议改用“从相册移除”。</p>
+            <div className="modal-meta">
+              <span>当前目录：{folderLabel(folderFromPath(pendingDeleteAsset.filePath))}</span>
+              <span>拍摄时间：{formatDateTime(pendingDeleteAsset.capturedAt)}</span>
+            </div>
+            <div className="modal-actions">
+              <button className="button button-ghost" onClick={() => setPendingDeleteAsset(null)}>取消</button>
+              <button className="button button-secondary" onClick={() => removeFromAlbum(pendingDeleteAsset)}>改为仅从相册移除</button>
+              <button className="button button-danger" onClick={() => void confirmDeleteFromDisk(pendingDeleteAsset)}>确认删除</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showShortcutHelp ? (
+        <div className="modal-backdrop" onClick={() => setShowShortcutHelp(false)}>
+          <div className="modal-card modal-card-shortcuts" onClick={(event) => event.stopPropagation()}>
+            <span className="modal-eyebrow">快捷键帮助</span>
+            <h3>浏览与筛选</h3>
+            <div className="shortcut-list">
+              <div><kbd>←</kbd><span>上一张</span></div>
+              <div><kbd>→</kbd><span>下一张</span></div>
+              <div><kbd>/</kbd><span>聚焦搜索框</span></div>
+              <div><kbd>F</kbd><span>切换只看精选</span></div>
+              <div><kbd>?</kbd><span>打开或关闭帮助</span></div>
+              <div><kbd>Esc</kbd><span>关闭菜单、对话框或清空搜索</span></div>
+            </div>
+            <div className="modal-actions">
+              <button className="button button-primary" onClick={() => setShowShortcutHelp(false)}>知道了</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div className={`toast ${toast.tone === 'danger' ? 'toast-danger' : ''}`}>
+          <span>{toast.message}</span>
+          {toast.action && toast.actionLabel ? (
+            <button
+              className="toast-action"
+              onClick={() => {
+                toast.action?.();
+                setToast(null);
+              }}
+            >
+              {toast.actionLabel}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
