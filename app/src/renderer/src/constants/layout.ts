@@ -1,0 +1,7 @@
+export const WATERFALL_MIN_TILE_WIDTH = 208;
+export const WATERFALL_GAP = 10;
+export const FILMSTRIP_THUMB_HEIGHT = 92;
+export const CHROME_ANIMATION_DURATION_MS = 320;
+export const CONTEXT_MENU_WIDTH = 248;
+export const CONTEXT_MENU_HEIGHT = 168;
+export const CONTEXT_MENU_VIEWPORT_PADDING = 12;
