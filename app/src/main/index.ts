@@ -230,8 +230,14 @@ function createMainWindow() {
     height: 920,
     minWidth: 1180,
     minHeight: 760,
-    backgroundColor: '#f4ede3',
-    titleBarStyle: 'hiddenInset',
+    backgroundColor: '#121a25',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#00000000',
+      symbolColor: '#eef4ff',
+      height: 52
+    },
+    backgroundMaterial: process.platform === 'win32' ? 'acrylic' : 'auto',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),

@@ -334,14 +334,17 @@ function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onErro
     }
 
     let cancelled = false;
+    let resolved = false;
     const image = new Image();
     image.decoding = 'async';
     image.src = fullSource;
 
     const markReady = () => {
-      if (cancelled) {
+      if (cancelled || resolved) {
         return;
       }
+
+      resolved = true;
 
       const nextImage = {
         src: fullSource,
@@ -408,7 +411,25 @@ function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onErro
     <div className="progressive-stage">
       {displayedImage ? (
         <img
-          className={`detail-media detail-media-full detail-media-layer-current ${incomingImage ? 'detail-media-layer-fading' : ''}`}
+          className={`detail-media detail-media-backdrop detail-media-layer-current ${isTransitionActive ? 'detail-media-layer-fading' : ''}`}
+          src={displayedImage.src}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
+      ) : null}
+      {incomingImage ? (
+        <img
+          className={`detail-media detail-media-backdrop detail-media-layer-next ${isTransitionActive ? 'detail-media-layer-visible' : ''}`}
+          src={incomingImage.src}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
+      ) : null}
+      {displayedImage ? (
+        <img
+          className={`detail-media detail-media-full detail-media-layer-current ${isTransitionActive ? 'detail-media-layer-fading' : ''}`}
           src={displayedImage.src}
           alt={displayedImage.alt}
           decoding="async"
