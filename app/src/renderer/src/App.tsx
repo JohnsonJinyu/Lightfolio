@@ -190,7 +190,7 @@ const fileUrlCache = new Map<string, string | null>();
 const waterfallMinTileWidth = 208;
 const waterfallGap = 10;
 const filmstripThumbHeight = 92;
-const singleImageFadeDurationMs = 180;
+const chromeAnimationDurationMs = 320;
 const contextMenuWidth = 248;
 const contextMenuHeight = 168;
 const contextMenuViewportPadding = 12;
@@ -300,36 +300,15 @@ function ImagePreview({
 function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onError: () => void }) {
   const fullSource = useMemo(() => getFileUrlCached(asset.filePath, 'full'), [asset.filePath]);
   const [displayedImage, setDisplayedImage] = useState<{ src: string; alt: string } | null>(null);
-  const [incomingImage, setIncomingImage] = useState<{ src: string; alt: string } | null>(null);
-  const [isTransitionActive, setIsTransitionActive] = useState(false);
   const displayedImageRef = useRef<{ src: string; alt: string } | null>(null);
-  const transitionTimerRef = useRef<number | null>(null);
-  const transitionFrameRef = useRef<number | null>(null);
-
-  const clearTransition = useCallback(() => {
-    if (transitionTimerRef.current) {
-      window.clearTimeout(transitionTimerRef.current);
-      transitionTimerRef.current = null;
-    }
-
-    if (transitionFrameRef.current) {
-      window.cancelAnimationFrame(transitionFrameRef.current);
-      transitionFrameRef.current = null;
-    }
-  }, []);
 
   useEffect(() => {
     displayedImageRef.current = displayedImage;
   }, [displayedImage]);
 
-  useEffect(() => clearTransition, [clearTransition]);
-
   useEffect(() => {
     if (!fullSource) {
-      clearTransition();
       setDisplayedImage(null);
-      setIncomingImage(null);
-      setIsTransitionActive(false);
       return;
     }
 
@@ -353,33 +332,10 @@ function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onErro
       const currentImage = displayedImageRef.current;
 
       if (currentImage?.src === nextImage.src && currentImage.alt === nextImage.alt) {
-        clearTransition();
-        setIncomingImage(null);
-        setIsTransitionActive(false);
         return;
       }
 
-      clearTransition();
-
-      if (!currentImage) {
-        setDisplayedImage(nextImage);
-        setIncomingImage(null);
-        setIsTransitionActive(false);
-        return;
-      }
-
-      setIncomingImage(nextImage);
-      setIsTransitionActive(false);
-      transitionFrameRef.current = window.requestAnimationFrame(() => {
-        transitionFrameRef.current = null;
-        setIsTransitionActive(true);
-      });
-      transitionTimerRef.current = window.setTimeout(() => {
-        setDisplayedImage(nextImage);
-        setIncomingImage(null);
-        setIsTransitionActive(false);
-        transitionTimerRef.current = null;
-      }, singleImageFadeDurationMs);
+      setDisplayedImage(nextImage);
     };
 
     image.onload = markReady;
@@ -405,42 +361,16 @@ function ProgressiveSingleImage({ asset, onError }: { asset: AssetRecord; onErro
       image.onload = null;
       image.onerror = null;
     };
-  }, [asset.caption?.title, asset.fileName, clearTransition, fullSource, onError]);
+  }, [asset.caption?.title, asset.fileName, fullSource, onError]);
 
   return (
     <div className="progressive-stage">
+      <div className="progressive-stage-ambient" aria-hidden="true" />
       {displayedImage ? (
         <img
-          className={`detail-media detail-media-backdrop detail-media-layer-current ${isTransitionActive ? 'detail-media-layer-fading' : ''}`}
-          src={displayedImage.src}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-        />
-      ) : null}
-      {incomingImage ? (
-        <img
-          className={`detail-media detail-media-backdrop detail-media-layer-next ${isTransitionActive ? 'detail-media-layer-visible' : ''}`}
-          src={incomingImage.src}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-        />
-      ) : null}
-      {displayedImage ? (
-        <img
-          className={`detail-media detail-media-full detail-media-layer-current ${isTransitionActive ? 'detail-media-layer-fading' : ''}`}
+          className="detail-media detail-media-full detail-media-layer-current"
           src={displayedImage.src}
           alt={displayedImage.alt}
-          decoding="async"
-          onError={onError}
-        />
-      ) : null}
-      {incomingImage ? (
-        <img
-          className={`detail-media detail-media-full detail-media-layer-next ${isTransitionActive ? 'detail-media-layer-visible' : ''}`}
-          src={incomingImage.src}
-          alt={incomingImage.alt}
           decoding="async"
           onError={onError}
         />
@@ -475,9 +405,11 @@ export function App() {
   const [toast, setToast] = useState<{ message: string; actionLabel?: string; action?: () => void; tone?: 'info' | 'danger' } | null>(null);
   const [pendingDeleteAsset, setPendingDeleteAsset] = useState<AssetRecord | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [isChromeAnimating, setIsChromeAnimating] = useState(false);
   const wheelLockUntilRef = useRef(0);
   const holdTimerRef = useRef<number | null>(null);
   const holdKeyRef = useRef<string | null>(null);
+  const chromeAnimationTimerRef = useRef<number | null>(null);
   const filmstripTrackRef = useRef<HTMLDivElement | null>(null);
   const waterfallRef = useRef<HTMLDivElement | null>(null);
   const [waterfallMetrics, setWaterfallMetrics] = useState({ width: 0, height: 0, scrollTop: 0 });
@@ -516,6 +448,12 @@ export function App() {
     .filter((asset): asset is AssetRecord => Boolean(asset));
   const previewFailureCount = failedPreviewIds.size;
   const totalAssets = visibleAssets.length;
+
+  useEffect(() => () => {
+    if (chromeAnimationTimerRef.current) {
+      window.clearTimeout(chromeAnimationTimerRef.current);
+    }
+  }, []);
   const activeSource = importState?.source === 'directory' ? '目录导入' : importState?.source === 'files' ? '文件导入' : '示例内容';
   const folderSequence = useMemo(() => ['all', ...folderItems.map((item) => item.path)], [folderItems]);
   const isViewerLoading = !isLibraryReady || (isBusy && !importState);
@@ -1052,6 +990,28 @@ export function App() {
     }));
   }
 
+  function pulseChromeAnimation() {
+    if (chromeAnimationTimerRef.current) {
+      window.clearTimeout(chromeAnimationTimerRef.current);
+    }
+
+    setIsChromeAnimating(true);
+    chromeAnimationTimerRef.current = window.setTimeout(() => {
+      setIsChromeAnimating(false);
+      chromeAnimationTimerRef.current = null;
+    }, chromeAnimationDurationMs);
+  }
+
+  function toggleDetailPanel() {
+    pulseChromeAnimation();
+    setIsDetailPanelCollapsed((previous) => !previous);
+  }
+
+  function toggleFilmstrip() {
+    pulseChromeAnimation();
+    setIsFilmstripCollapsed((previous) => !previous);
+  }
+
   async function revealInExplorer(asset: AssetRecord) {
     const revealed = await window.lightfolio.revealFile(asset.filePath);
 
@@ -1308,8 +1268,8 @@ export function App() {
             </div>
           ) : selected ? (
             viewMode === 'single' ? (
-              <article className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''}`} onWheel={onSingleWheel}>
-                <div className="viewer-stage" onContextMenu={(event) => openAssetMenu(event, selected.id)}>
+              <article className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''} ${isChromeAnimating ? 'viewer-single-chrome-animating' : ''}`} onWheel={onSingleWheel}>
+                <div className={`viewer-stage ${isChromeAnimating ? 'viewer-stage-chrome-animating' : ''}`} onContextMenu={(event) => openAssetMenu(event, selected.id)}>
                   <div className={`viewer-media viewer-media-${selected.kind} media-${navDirection}`}>
                     {!failedPreviewIds.has(selected.id) ? (
                       selected.kind === 'image' ? (
@@ -1324,104 +1284,106 @@ export function App() {
                     <strong>{selected.caption?.title ?? selected.fileName}</strong>
                     <em>{selected.kind === 'video' ? '视频' : '照片'} · {selectedFolderLabel}</em>
                   </div>
+                </div>
+                <aside className={`detail-panel-shell ${isDetailPanelCollapsed ? 'detail-panel-shell-collapsed' : ''}`} onWheel={onSingleWheel}>
                   <button
                     className={`detail-panel-toggle ${isDetailPanelCollapsed ? 'detail-panel-toggle-collapsed' : ''}`}
                     type="button"
                     aria-label={isDetailPanelCollapsed ? '展开信息栏' : '收起信息栏'}
                     title={isDetailPanelCollapsed ? '展开信息栏' : '收起信息栏'}
-                    onClick={() => setIsDetailPanelCollapsed((previous) => !previous)}
+                    onClick={toggleDetailPanel}
                   >
                     <span aria-hidden="true">{isDetailPanelCollapsed ? '‹' : '›'}</span>
                   </button>
-                </div>
-                {!isDetailPanelCollapsed ? (
-                <aside className="detail-panel" onWheel={onSingleWheel}>
-                  <div className="detail-panel-header">
-                    <div>
-                      <span className="detail-eyebrow">当前作品</span>
-                      <h3>{selected.caption?.title ?? selected.fileName}</h3>
-                    </div>
-                    <div className="detail-panel-header-actions">
-                      {selected.isFeatured ? <span className="detail-badge">精选</span> : null}
-                    </div>
-                  </div>
-                  <>
-                    <p className="detail-description">{selected.caption?.body ?? '右键主图或下方胶卷缩略图，可执行打开、移除和删除操作。'}</p>
-                    <div className="detail-grid">
-                      <div className="detail-card">
-                        <span>拍摄时间</span>
-                        <strong>{formatDateTime(selected.capturedAt)}</strong>
-                      </div>
-                      <div className="detail-card">
-                        <span>所在目录</span>
-                        <strong title={folderFromPath(selected.filePath)}>{selectedFolderLabel}</strong>
-                      </div>
-                      <div className="detail-card">
-                        <span>设备</span>
-                        <strong>{selected.cameraModel ?? '未读取到相机信息'}</strong>
-                      </div>
-                      <div className="detail-card">
-                        <span>镜头</span>
-                        <strong>{selected.lensModel ?? '未读取到镜头信息'}</strong>
-                      </div>
-                    </div>
-                    <div className={`detail-section ${collapsedDetailSections.description ? 'detail-section-collapsed' : ''}`}>
-                      <button className="detail-section-toggle" onClick={() => toggleDetailSection('description')}>
-                        <span className="detail-section-title">作品说明</span>
-                        <span>{collapsedDetailSections.description ? '展开' : '收起'}</span>
-                      </button>
-                      {!collapsedDetailSections.description ? (
-                        <div className="detail-section-body">
-                          <p>{selected.caption?.body ?? '这张作品还没有补充说明。'}</p>
+                  <div className={`detail-panel-content ${isDetailPanelCollapsed ? 'detail-panel-content-hidden' : ''}`} aria-hidden={isDetailPanelCollapsed}>
+                    <div className="detail-panel">
+                      <div className="detail-panel-header">
+                        <div>
+                          <span className="detail-eyebrow">当前作品</span>
+                          <h3>{selected.caption?.title ?? selected.fileName}</h3>
                         </div>
-                      ) : null}
-                    </div>
-                    <div className={`detail-section ${collapsedDetailSections.tags ? 'detail-section-collapsed' : ''}`}>
-                      <button className="detail-section-toggle" onClick={() => toggleDetailSection('tags')}>
-                        <span className="detail-section-title">标签</span>
-                        <span>{collapsedDetailSections.tags ? '展开' : '收起'}</span>
-                      </button>
-                      {!collapsedDetailSections.tags ? (
-                        <div className="detail-section-body">
-                          <div className="detail-tags">
-                            {detailTags.length > 0 ? detailTags.map((tag) => (
-                              <span key={tag.id} className="detail-tag">{tag.label}</span>
-                            )) : <span className="detail-tag detail-tag-muted">暂无标签</span>}
+                        <div className="detail-panel-header-actions">
+                          {selected.isFeatured ? <span className="detail-badge">精选</span> : null}
+                        </div>
+                      </div>
+                      <>
+                        <p className="detail-description">{selected.caption?.body ?? '右键主图或下方胶卷缩略图，可执行打开、移除和删除操作。'}</p>
+                        <div className="detail-grid">
+                          <div className="detail-card">
+                            <span>拍摄时间</span>
+                            <strong>{formatDateTime(selected.capturedAt)}</strong>
+                          </div>
+                          <div className="detail-card">
+                            <span>所在目录</span>
+                            <strong title={folderFromPath(selected.filePath)}>{selectedFolderLabel}</strong>
+                          </div>
+                          <div className="detail-card">
+                            <span>设备</span>
+                            <strong>{selected.cameraModel ?? '未读取到相机信息'}</strong>
+                          </div>
+                          <div className="detail-card">
+                            <span>镜头</span>
+                            <strong>{selected.lensModel ?? '未读取到镜头信息'}</strong>
                           </div>
                         </div>
-                      ) : null}
-                    </div>
-                    <div className={`detail-section ${collapsedDetailSections.fileInfo ? 'detail-section-collapsed' : ''}`}>
-                      <button className="detail-section-toggle" onClick={() => toggleDetailSection('fileInfo')}>
-                        <span className="detail-section-title">文件信息</span>
-                        <span>{collapsedDetailSections.fileInfo ? '展开' : '收起'}</span>
-                      </button>
-                      {!collapsedDetailSections.fileInfo ? (
-                        <div className="detail-section-body">
-                          <dl className="detail-list">
-                            <div>
-                              <dt>文件名</dt>
-                              <dd>{selected.fileName}</dd>
+                        <div className={`detail-section ${collapsedDetailSections.description ? 'detail-section-collapsed' : ''}`}>
+                          <button className="detail-section-toggle" onClick={() => toggleDetailSection('description')}>
+                            <span className="detail-section-title">作品说明</span>
+                            <span>{collapsedDetailSections.description ? '展开' : '收起'}</span>
+                          </button>
+                          {!collapsedDetailSections.description ? (
+                            <div className="detail-section-body">
+                              <p>{selected.caption?.body ?? '这张作品还没有补充说明。'}</p>
                             </div>
-                            <div>
-                              <dt>导入时间</dt>
-                              <dd>{formatDateTime(selected.importedAt)}</dd>
-                            </div>
-                            <div>
-                              <dt>尺寸</dt>
-                              <dd>{selected.pixelWidth && selected.pixelHeight ? `${selected.pixelWidth} × ${selected.pixelHeight}` : '待补充'}</dd>
-                            </div>
-                            <div>
-                              <dt>地点</dt>
-                              <dd>{selected.location?.label ?? '待手动标记地点'}</dd>
-                            </div>
-                          </dl>
+                          ) : null}
                         </div>
-                      ) : null}
+                        <div className={`detail-section ${collapsedDetailSections.tags ? 'detail-section-collapsed' : ''}`}>
+                          <button className="detail-section-toggle" onClick={() => toggleDetailSection('tags')}>
+                            <span className="detail-section-title">标签</span>
+                            <span>{collapsedDetailSections.tags ? '展开' : '收起'}</span>
+                          </button>
+                          {!collapsedDetailSections.tags ? (
+                            <div className="detail-section-body">
+                              <div className="detail-tags">
+                                {detailTags.length > 0 ? detailTags.map((tag) => (
+                                  <span key={tag.id} className="detail-tag">{tag.label}</span>
+                                )) : <span className="detail-tag detail-tag-muted">暂无标签</span>}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className={`detail-section ${collapsedDetailSections.fileInfo ? 'detail-section-collapsed' : ''}`}>
+                          <button className="detail-section-toggle" onClick={() => toggleDetailSection('fileInfo')}>
+                            <span className="detail-section-title">文件信息</span>
+                            <span>{collapsedDetailSections.fileInfo ? '展开' : '收起'}</span>
+                          </button>
+                          {!collapsedDetailSections.fileInfo ? (
+                            <div className="detail-section-body">
+                              <dl className="detail-list">
+                                <div>
+                                  <dt>文件名</dt>
+                                  <dd>{selected.fileName}</dd>
+                                </div>
+                                <div>
+                                  <dt>导入时间</dt>
+                                  <dd>{formatDateTime(selected.importedAt)}</dd>
+                                </div>
+                                <div>
+                                  <dt>尺寸</dt>
+                                  <dd>{selected.pixelWidth && selected.pixelHeight ? `${selected.pixelWidth} × ${selected.pixelHeight}` : '待补充'}</dd>
+                                </div>
+                                <div>
+                                  <dt>地点</dt>
+                                  <dd>{selected.location?.label ?? '待手动标记地点'}</dd>
+                                </div>
+                              </dl>
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
                     </div>
-                  </>
+                  </div>
                 </aside>
-                ) : null}
               </article>
             ) : (
               <div className="waterfall-grid" ref={waterfallRef}>
@@ -1486,19 +1448,17 @@ export function App() {
             type="button"
             aria-label={isFilmstripCollapsed ? '展开胶卷栏' : '收起胶卷栏'}
             title={isFilmstripCollapsed ? '展开胶卷栏' : '收起胶卷栏'}
-            onClick={() => setIsFilmstripCollapsed((previous) => !previous)}
+            onClick={toggleFilmstrip}
           >
-            <span aria-hidden="true">{isFilmstripCollapsed ? '▴' : '▾'}</span>
+            <span aria-hidden="true">{isFilmstripCollapsed ? '‹' : '›'}</span>
           </button>
-          {!isFilmstripCollapsed ? (
+          <div className={`filmstrip-body ${isFilmstripCollapsed ? 'filmstrip-body-collapsed' : ''}`} aria-hidden={isFilmstripCollapsed}>
             <div className="filmstrip-head">
               <div>
                 <h2>胶卷</h2>
                 <span>{filteredAssets.length} 张</span>
               </div>
             </div>
-          ) : null}
-          {!isFilmstripCollapsed ? (
             <div className="filmstrip-track" ref={filmstripTrackRef} onWheel={onFilmstripWheel}>
               {filteredAssets.map((asset) => {
                 return (
@@ -1530,7 +1490,7 @@ export function App() {
               );
               })}
             </div>
-          ) : null}
+          </div>
         </section>
       </main>
 
