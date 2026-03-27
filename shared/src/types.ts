@@ -69,8 +69,6 @@ export interface LibraryViewState {
   selectedAssetId: string | null;
   activeFolder: string;
   viewMode: 'single' | 'waterfall';
-  searchText: string;
-  showFeaturedOnly: boolean;
   isSidebarCollapsed: boolean;
   isFolderListCollapsed: boolean;
   isDetailPanelCollapsed: boolean;

@@ -10,8 +10,6 @@ function createDefaultViewState(): LibraryViewState {
     selectedAssetId: null,
     activeFolder: 'all',
     viewMode: 'single',
-    searchText: '',
-    showFeaturedOnly: false,
     isSidebarCollapsed: false,
     isFolderListCollapsed: false,
     isDetailPanelCollapsed: false,
