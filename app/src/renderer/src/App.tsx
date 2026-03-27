@@ -16,7 +16,7 @@ import {
 } from './components';
 import { useAssetBrowser, useThumbnailWarmup, useViewerChrome } from './hooks';
 import type { ToastState } from './types';
-import { collectAssetMap, filterTimeline, folderFromPath, folderLabel, mergeImportSummaries, preloadImage } from './utils';
+import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage } from './utils';
 
 export function App() {
   const [importState, setImportState] = useState<ImportSummary | null>(null);
@@ -54,7 +54,6 @@ export function App() {
   const totalAssets = visibleAssets.length;
   const activeSource = importState?.source === 'directory' ? '目录导入' : importState?.source === 'files' ? '文件导入' : '示例内容';
   const browser = useAssetBrowser({
-    importState,
     isLibraryReady,
     folderItems,
     visibleAssets,
@@ -107,7 +106,16 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [browser, chrome, warmupThumbnails]);
+  }, [
+    browser.setActiveFolder,
+    browser.setSelectedAssetId,
+    browser.setViewMode,
+    chrome.setIsDetailPanelCollapsed,
+    chrome.setIsFilmstripCollapsed,
+    chrome.setIsFolderListCollapsed,
+    chrome.setIsSidebarCollapsed,
+    warmupThumbnails
+  ]);
 
   useEffect(() => {
     if (!isLibraryReady) {
@@ -179,7 +187,7 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', onGlobalKeyDown);
     };
-  }, [chrome, pendingDeleteAsset]);
+  }, [chrome.contextMenu, chrome.setContextMenu, chrome.setShowShortcutHelp, chrome.showShortcutHelp, pendingDeleteAsset]);
 
   async function runImport(mode: 'files' | 'directory') {
     setIsBusy(true);

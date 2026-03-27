@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AssetRecord, ImportSummary } from '@lightfolio/shared';
+import type { AssetRecord } from '@lightfolio/shared';
 
 import { WATERFALL_GAP, WATERFALL_MIN_TILE_WIDTH } from '../constants/layout';
 import type { NavDirection, ViewMode, WaterfallLayoutMetrics } from '../types/ui';
@@ -8,7 +8,6 @@ import { folderFromPath } from '../utils/library';
 import { preloadImage } from '../utils/media';
 
 interface UseAssetBrowserOptions {
-  importState: ImportSummary | null;
   isLibraryReady: boolean;
   folderItems: Array<{ path: string; count: number }>;
   visibleAssets: AssetRecord[];
@@ -21,7 +20,7 @@ interface WaterfallMetricsState {
   scrollTop: number;
 }
 
-export function useAssetBrowser({ importState, isLibraryReady, folderItems, visibleAssets, failedPreviewIds }: UseAssetBrowserOptions) {
+export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, failedPreviewIds }: UseAssetBrowserOptions) {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('single');
