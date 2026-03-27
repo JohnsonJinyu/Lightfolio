@@ -6,8 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { nativeImage } from 'electron';
 
-import { createImportSummary, createStorageAdapter } from '@lightfolio/core';
-import type { LibrarySnapshot } from '@lightfolio/shared';
+import { createCuratedStory, createImportSummary, createStorageAdapter, groupAssetsByMonth, readExifSnapshot } from '@lightfolio/core';
+import type { AssetRecord, LibrarySnapshot } from '@lightfolio/shared';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -146,6 +146,85 @@ function enrichImportSummaryWithDimensions<T extends { assets: Array<{ kind: str
   }
 
   return summary;
+}
+
+async function isLikelyFallbackCapturedAt(asset: AssetRecord) {
+  if (asset.capturedAt === asset.importedAt) {
+    return true;
+  }
+
+  try {
+    const stats = await fs.stat(asset.filePath);
+
+    if (Number.isNaN(stats.mtimeMs)) {
+      return false;
+    }
+
+    return new Date(stats.mtimeMs).toISOString() === asset.capturedAt;
+  } catch {
+    return false;
+  }
+}
+
+async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
+  const importState = snapshot.importState;
+
+  if (!importState?.assets.length) {
+    return snapshot;
+  }
+
+  let changed = false;
+
+  const assets = await Promise.all(importState.assets.map(async (asset) => {
+    if (asset.kind !== 'image') {
+      return asset;
+    }
+
+    const needsMetadata = !asset.cameraModel || !asset.lensModel || await isLikelyFallbackCapturedAt(asset);
+
+    if (!needsMetadata) {
+      return asset;
+    }
+
+    const exif = await readExifSnapshot(asset.filePath);
+    const nextCapturedAt = exif.capturedAt ?? asset.capturedAt;
+    const nextCameraModel = exif.cameraModel ?? asset.cameraModel;
+    const nextLensModel = exif.lensModel ?? asset.lensModel;
+
+    if (
+      nextCapturedAt === asset.capturedAt
+      && nextCameraModel === asset.cameraModel
+      && nextLensModel === asset.lensModel
+    ) {
+      return asset;
+    }
+
+    changed = true;
+
+    return {
+      ...asset,
+      capturedAt: nextCapturedAt,
+      cameraModel: nextCameraModel,
+      lensModel: nextLensModel
+    };
+  }));
+
+  if (!changed) {
+    return snapshot;
+  }
+
+  const sortedAssets = assets.sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+
+  return {
+    ...snapshot,
+    importState: {
+      ...importState,
+      assets: sortedAssets,
+      timeline: groupAssetsByMonth(sortedAssets),
+      story: createCuratedStory(sortedAssets)
+    },
+    updatedAt: new Date().toISOString()
+  };
 }
 
 async function scanDirectoryForMedia(rootDirectory: string) {
@@ -334,7 +413,14 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('library:load', async () => {
-    return libraryStorage.load();
+    const snapshot = await libraryStorage.load();
+    const hydratedSnapshot = await hydrateLibrarySnapshot(snapshot);
+
+    if (hydratedSnapshot !== snapshot) {
+      await libraryStorage.save(hydratedSnapshot);
+    }
+
+    return hydratedSnapshot;
   });
 
   ipcMain.handle('library:save', async (_event, snapshot: LibrarySnapshot) => {

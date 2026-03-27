@@ -9,6 +9,7 @@ export interface ExifSnapshot {
 interface RawExifFields {
   DateTimeOriginal?: Date | string;
   CreateDate?: Date | string;
+  Make?: string;
   Model?: string;
   LensModel?: string;
   LensInfo?: string;
@@ -16,7 +17,11 @@ interface RawExifFields {
 
 const exifExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp']);
 
-let exifrModulePromise: Promise<typeof import('exifr') | null> | null = null;
+interface ExifrReader {
+  parse(input: string, options?: unknown): Promise<RawExifFields | null>;
+}
+
+let exifrModulePromise: Promise<ExifrReader | null> | null = null;
 
 function normalizeDate(value: Date | string | undefined): string | undefined {
   if (!value) {
@@ -51,9 +56,40 @@ function normalizeText(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function normalizeCameraModel(make: string | undefined, model: string | undefined) {
+  const normalizedMake = normalizeText(make);
+  const normalizedModel = normalizeText(model);
+
+  if (!normalizedMake) {
+    return normalizedModel;
+  }
+
+  if (!normalizedModel) {
+    return normalizedMake;
+  }
+
+  if (normalizedModel.toLowerCase().startsWith(normalizedMake.toLowerCase())) {
+    return normalizedModel;
+  }
+
+  return `${normalizedMake} ${normalizedModel}`;
+}
+
 async function loadExifrModule() {
   if (!exifrModulePromise) {
-    exifrModulePromise = import('exifr').catch(() => null);
+    exifrModulePromise = import('exifr')
+      .then((module) => {
+        if (typeof module.parse === 'function') {
+          return module as ExifrReader;
+        }
+
+        if (typeof module.default?.parse === 'function') {
+          return module.default as ExifrReader;
+        }
+
+        return null;
+      })
+      .catch(() => null);
   }
 
   return exifrModulePromise;
@@ -74,8 +110,8 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
 
   try {
     const raw = await exifr.parse(filePath, {
-      pick: ['DateTimeOriginal', 'CreateDate', 'Model', 'LensModel', 'LensInfo']
-    }) as RawExifFields | null;
+      pick: ['DateTimeOriginal', 'CreateDate', 'Make', 'Model', 'LensModel', 'LensInfo']
+    });
 
     if (!raw) {
       return {};
@@ -83,7 +119,7 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
 
     return {
       capturedAt: normalizeDate(raw.DateTimeOriginal ?? raw.CreateDate),
-      cameraModel: normalizeText(raw.Model),
+      cameraModel: normalizeCameraModel(raw.Make, raw.Model),
       lensModel: normalizeText(raw.LensModel ?? raw.LensInfo)
     };
   } catch {
