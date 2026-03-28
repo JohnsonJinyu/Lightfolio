@@ -180,6 +180,13 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
       return asset;
     }
 
+    const size = (!asset.pixelWidth || !asset.pixelHeight)
+      ? imageSizeForPath(asset.filePath)
+      : null;
+
+    const nextPixelWidth = asset.pixelWidth ?? size?.width;
+    const nextPixelHeight = asset.pixelHeight ?? size?.height;
+
     const needsMetadata = !asset.cameraModel
       || !asset.lensModel
       || !asset.aperture
@@ -200,7 +207,9 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
     const nextIso = exif.iso ?? asset.iso;
 
     if (
-      nextCapturedAt === asset.capturedAt
+      nextPixelWidth === asset.pixelWidth
+      && nextPixelHeight === asset.pixelHeight
+      && nextCapturedAt === asset.capturedAt
       && nextCameraModel === asset.cameraModel
       && nextLensModel === asset.lensModel
       && nextAperture === asset.aperture
@@ -214,6 +223,8 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
 
     return {
       ...asset,
+      pixelWidth: nextPixelWidth,
+      pixelHeight: nextPixelHeight,
       capturedAt: nextCapturedAt,
       cameraModel: nextCameraModel,
       lensModel: nextLensModel,

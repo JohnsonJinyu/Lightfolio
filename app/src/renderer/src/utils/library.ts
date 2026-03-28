@@ -148,27 +148,34 @@ export function folderLabel(folder: string) {
   return parts[parts.length - 1] ?? folder;
 }
 
-export function tileVariant(assetId: string) {
-  const seed = assetId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const bucket = seed % 5;
-
-  if (bucket === 0) {
-    return 'tile-wide';
-  }
-
-  if (bucket === 1) {
-    return 'tile-tall';
-  }
-
-  return 'tile-normal';
-}
-
 export function assetAspectRatio(asset: AssetRecord) {
   if (asset.pixelWidth && asset.pixelHeight) {
     return asset.pixelWidth / asset.pixelHeight;
   }
 
   return 1;
+}
+
+export function waterfallBucketAspectRatio(asset: AssetRecord) {
+  const aspectRatio = assetAspectRatio(asset);
+
+  if (aspectRatio <= 0.72) {
+    return 0.7;
+  }
+
+  if (aspectRatio <= 0.9) {
+    return 0.8;
+  }
+
+  if (aspectRatio < 1.12) {
+    return 1;
+  }
+
+  if (aspectRatio < 1.45) {
+    return 4 / 3;
+  }
+
+  return 3 / 2;
 }
 
 export function filmstripThumbWidth(asset: AssetRecord) {

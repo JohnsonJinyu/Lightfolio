@@ -1,3 +1,5 @@
+import type { AssetRecord } from '@lightfolio/shared';
+
 export type DetailSectionKey = 'description' | 'tags' | 'fileInfo';
 export type ViewMode = 'single' | 'waterfall';
 export type NavDirection = 'forward' | 'backward' | 'none';
@@ -32,12 +34,24 @@ export interface ToastState {
   tone?: 'info' | 'danger';
 }
 
+export interface WaterfallTileLayout {
+  index: number;
+  assetId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bottom: number;
+}
+
+export interface WaterfallVisibleItem {
+  asset: AssetRecord;
+  tile: WaterfallTileLayout;
+}
+
 export interface WaterfallLayoutMetrics {
   columns: number;
   columnWidth: number;
-  rowHeight: number;
-  totalRows: number;
-  startIndex: number;
-  endIndex: number;
   totalHeight: number;
+  items: WaterfallTileLayout[];
 }

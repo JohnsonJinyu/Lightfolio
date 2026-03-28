@@ -703,11 +703,10 @@ export function App() {
               />
             ) : (
               <WaterfallGrid
-                assets={filteredAssets}
                 selectedId={browser.selected?.id ?? null}
                 failedPreviewIds={failedPreviewIds}
                 layout={browser.waterfallLayout}
-                visibleAssets={browser.waterfallVisible}
+                visibleItems={browser.waterfallVisible}
                 containerRef={browser.waterfallRef}
                 onSelectById={browser.selectById}
                 onOpenAssetMenu={chrome.openAssetMenu}

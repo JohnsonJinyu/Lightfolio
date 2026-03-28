@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AssetRecord } from '@lightfolio/shared';
 
 import { WATERFALL_GAP, WATERFALL_MIN_TILE_WIDTH } from '../constants/layout';
-import type { BrowserFilters, NavDirection, ViewMode, WaterfallLayoutMetrics } from '../types/ui';
-import { folderFromPath } from '../utils/library';
+import type { BrowserFilters, NavDirection, ViewMode, WaterfallLayoutMetrics, WaterfallVisibleItem } from '../types/ui';
+import { folderFromPath, waterfallBucketAspectRatio } from '../utils/library';
 import { preloadImage } from '../utils/media';
 
 interface UseAssetBrowserOptions {
@@ -98,29 +98,63 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
     const width = Math.max(0, waterfallMetrics.width);
     const columns = Math.max(1, Math.floor((width + WATERFALL_GAP) / (WATERFALL_MIN_TILE_WIDTH + WATERFALL_GAP)));
     const columnWidth = Math.max(160, Math.floor((width - WATERFALL_GAP * (columns - 1)) / columns));
-    const rowHeight = Math.max(220, Math.round(columnWidth * 0.72) + 56);
-    const totalRows = Math.ceil(filteredAssets.length / columns);
-    const startRow = Math.max(0, Math.floor(waterfallMetrics.scrollTop / rowHeight) - 2);
-    const visibleRowCount = Math.ceil((waterfallMetrics.height || 700) / rowHeight) + 4;
-    const endRow = Math.min(totalRows, startRow + visibleRowCount);
-    const startIndex = startRow * columns;
-    const endIndex = Math.min(filteredAssets.length, endRow * columns);
+    const columnHeights = Array.from({ length: columns }, () => 0);
+    const items = filteredAssets.map((asset, index) => {
+      const aspectRatio = asset.kind === 'video' && (!asset.pixelWidth || !asset.pixelHeight)
+        ? 3 / 2
+        : waterfallBucketAspectRatio(asset);
+      const height = Math.max(120, Math.round(columnWidth / aspectRatio));
+
+      let targetColumn = 0;
+      let minHeight = columnHeights[0] ?? 0;
+
+      for (let column = 1; column < columns; column += 1) {
+        const nextHeight = columnHeights[column] ?? 0;
+
+        if (nextHeight < minHeight) {
+          minHeight = nextHeight;
+          targetColumn = column;
+        }
+      }
+
+      const x = targetColumn * (columnWidth + WATERFALL_GAP);
+      const y = minHeight;
+      const bottom = y + height;
+
+      columnHeights[targetColumn] = bottom + WATERFALL_GAP;
+
+      return {
+        index,
+        assetId: asset.id,
+        x,
+        y,
+        width: columnWidth,
+        height,
+        bottom
+      };
+    });
+
+    const totalHeight = items.length === 0 ? 0 : Math.max(0, ...columnHeights) - WATERFALL_GAP;
 
     return {
       columns,
       columnWidth,
-      rowHeight,
-      totalRows,
-      startIndex,
-      endIndex,
-      totalHeight: totalRows * rowHeight
+      totalHeight,
+      items
     };
-  }, [filteredAssets.length, waterfallMetrics.height, waterfallMetrics.scrollTop, waterfallMetrics.width]);
+  }, [filteredAssets, waterfallMetrics.width]);
 
-  const waterfallVisible = useMemo(
-    () => filteredAssets.slice(waterfallLayout.startIndex, waterfallLayout.endIndex),
-    [filteredAssets, waterfallLayout.endIndex, waterfallLayout.startIndex]
-  );
+  const waterfallVisible: WaterfallVisibleItem[] = useMemo(() => {
+    const viewportTop = Math.max(0, waterfallMetrics.scrollTop - 480);
+    const viewportBottom = waterfallMetrics.scrollTop + (waterfallMetrics.height || 700) + 480;
+
+    return waterfallLayout.items
+      .filter((tile) => tile.bottom >= viewportTop && tile.y <= viewportBottom)
+      .map((tile) => ({
+        tile,
+        asset: filteredAssets[tile.index] as AssetRecord
+      }));
+  }, [filteredAssets, waterfallLayout.items, waterfallMetrics.height, waterfallMetrics.scrollTop]);
 
   const selectByIndex = useCallback((nextIndex: number) => {
     if (filteredAssets.length === 0) {

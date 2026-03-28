@@ -1463,7 +1463,7 @@ button {
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 4px;
+  padding-right: 0;
   height: 100%;
   min-height: 0;
 }
@@ -1475,62 +1475,39 @@ button {
 
 .waterfall-tile {
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.055);
-  border-radius: 11px;
-  padding: 7px;
-  display: grid;
-  gap: 6px;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  display: block;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
-  backdrop-filter: blur(16px) saturate(130%);
-  box-shadow: var(--glass-shadow-soft);
+  transition: filter 180ms ease;
 }
 
-.waterfall-tile:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.07);
+.waterfall-tile .asset-preview {
+  height: 100%;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
-.waterfall-tile p {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #c4cfdf;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.waterfall-tile:hover .asset-preview {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
 }
 
-.waterfall-tile-copy {
-  display: grid;
-  gap: 2px;
+.waterfall-tile .asset-media,
+.waterfall-tile .video-placeholder {
+  object-fit: cover;
 }
 
-.waterfall-tile-copy span {
-  color: #8fa0b5;
-  font-size: 0.72rem;
+.waterfall-tile .video-placeholder {
+  background: linear-gradient(145deg, #111722, #1d2631 52%, #293647);
 }
 
-.tile-normal {
-  height: 232px;
-}
-
-.tile-wide {
-  height: 232px;
-}
-
-.tile-tall {
-  height: 258px;
-}
-
-.tile-normal .asset-preview,
-.tile-wide .asset-preview,
-.tile-tall .asset-preview {
-  height: calc(100% - 30px);
-}
-
-.waterfall-tile-active {
-  box-shadow: inset 0 0 0 2px rgba(114, 157, 230, 0.72);
+.waterfall-tile-active .asset-preview {
+  box-shadow: inset 0 0 0 2px rgba(110, 166, 255, 0.86), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .feedback-line {
