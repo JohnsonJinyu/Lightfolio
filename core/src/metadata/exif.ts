@@ -17,9 +17,14 @@ interface RawExifFields {
   LensModel?: string;
   LensInfo?: string;
   FNumber?: number | string;
+  ApertureValue?: number | string;
+  MaxApertureValue?: number | string;
   ExposureTime?: number | string;
+  ShutterSpeedValue?: number | string;
   ISO?: number | string;
   PhotographicSensitivity?: number | string;
+  ISOSpeed?: number | string;
+  RecommendedExposureIndex?: number | string;
 }
 
 const exifExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp']);
@@ -94,6 +99,40 @@ function normalizeNumeric(value: number | string | undefined): number | undefine
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function normalizeAperture(value: number | string | undefined): number | undefined {
+  const numeric = normalizeNumeric(value);
+
+  if (!numeric || !Number.isFinite(numeric) || numeric <= 0) {
+    return undefined;
+  }
+
+  return numeric;
+}
+
+function normalizeShutterSpeed(value: number | string | undefined): number | undefined {
+  const numeric = normalizeNumeric(value);
+
+  if (!numeric || !Number.isFinite(numeric)) {
+    return undefined;
+  }
+
+  if (numeric <= 0) {
+    return undefined;
+  }
+
+  return numeric;
+}
+
+function normalizeIso(value: number | string | undefined): number | undefined {
+  const numeric = normalizeNumeric(value);
+
+  if (!numeric || !Number.isFinite(numeric) || numeric <= 0) {
+    return undefined;
+  }
+
+  return numeric;
+}
+
 function normalizeCameraModel(make: string | undefined, model: string | undefined) {
   const normalizedMake = normalizeText(make);
   const normalizedModel = normalizeText(model);
@@ -148,7 +187,23 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
 
   try {
     const raw = await exifr.parse(filePath, {
-      pick: ['DateTimeOriginal', 'CreateDate', 'Make', 'Model', 'LensModel', 'LensInfo', 'FNumber', 'ExposureTime', 'ISO', 'PhotographicSensitivity']
+      pick: [
+        'DateTimeOriginal',
+        'CreateDate',
+        'Make',
+        'Model',
+        'LensModel',
+        'LensInfo',
+        'FNumber',
+        'ApertureValue',
+        'MaxApertureValue',
+        'ExposureTime',
+        'ShutterSpeedValue',
+        'ISO',
+        'PhotographicSensitivity',
+        'ISOSpeed',
+        'RecommendedExposureIndex'
+      ]
     });
 
     if (!raw) {
@@ -159,9 +214,9 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
       capturedAt: normalizeDate(raw.DateTimeOriginal ?? raw.CreateDate),
       cameraModel: normalizeCameraModel(raw.Make, raw.Model),
       lensModel: normalizeText(raw.LensModel ?? raw.LensInfo),
-      aperture: normalizeNumeric(raw.FNumber),
-      shutterSpeed: normalizeNumeric(raw.ExposureTime),
-      iso: normalizeNumeric(raw.ISO ?? raw.PhotographicSensitivity)
+      aperture: normalizeAperture(raw.FNumber ?? raw.ApertureValue ?? raw.MaxApertureValue),
+      shutterSpeed: normalizeShutterSpeed(raw.ExposureTime ?? raw.ShutterSpeedValue),
+      iso: normalizeIso(raw.ISO ?? raw.PhotographicSensitivity ?? raw.ISOSpeed ?? raw.RecommendedExposureIndex)
     };
   } catch {
     return {};

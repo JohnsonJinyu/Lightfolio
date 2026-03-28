@@ -180,7 +180,12 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
       return asset;
     }
 
-    const needsMetadata = !asset.cameraModel || !asset.lensModel || await isLikelyFallbackCapturedAt(asset);
+    const needsMetadata = !asset.cameraModel
+      || !asset.lensModel
+      || !asset.aperture
+      || !asset.shutterSpeed
+      || !asset.iso
+      || await isLikelyFallbackCapturedAt(asset);
 
     if (!needsMetadata) {
       return asset;
@@ -190,11 +195,17 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
     const nextCapturedAt = exif.capturedAt ?? asset.capturedAt;
     const nextCameraModel = exif.cameraModel ?? asset.cameraModel;
     const nextLensModel = exif.lensModel ?? asset.lensModel;
+    const nextAperture = exif.aperture ?? asset.aperture;
+    const nextShutterSpeed = exif.shutterSpeed ?? asset.shutterSpeed;
+    const nextIso = exif.iso ?? asset.iso;
 
     if (
       nextCapturedAt === asset.capturedAt
       && nextCameraModel === asset.cameraModel
       && nextLensModel === asset.lensModel
+      && nextAperture === asset.aperture
+      && nextShutterSpeed === asset.shutterSpeed
+      && nextIso === asset.iso
     ) {
       return asset;
     }
@@ -205,7 +216,10 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
       ...asset,
       capturedAt: nextCapturedAt,
       cameraModel: nextCameraModel,
-      lensModel: nextLensModel
+      lensModel: nextLensModel,
+      aperture: nextAperture,
+      shutterSpeed: nextShutterSpeed,
+      iso: nextIso
     };
   }));
 
