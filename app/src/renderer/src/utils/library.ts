@@ -20,6 +20,35 @@ export function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+export function formatAperture(value: number | undefined) {
+  if (!value || !Number.isFinite(value)) {
+    return '未读取';
+  }
+
+  return `f/${value.toFixed(value >= 10 ? 0 : 1).replace(/\.0$/, '')}`;
+}
+
+export function formatShutterSpeed(value: number | undefined) {
+  if (!value || !Number.isFinite(value) || value <= 0) {
+    return '未读取';
+  }
+
+  if (value >= 1) {
+    return `${value.toFixed(value >= 10 ? 0 : 1).replace(/\.0$/, '')}s`;
+  }
+
+  const reciprocal = Math.round(1 / value);
+  return reciprocal > 1 ? `1/${reciprocal}s` : `${value.toFixed(1)}s`;
+}
+
+export function formatIso(value: number | undefined) {
+  if (!value || !Number.isFinite(value)) {
+    return '未读取';
+  }
+
+  return `ISO ${Math.round(value)}`;
+}
+
 export function mergeImportSummaries(current: ImportSummary | null, incoming: ImportSummary) {
   if (!current) {
     return incoming;
@@ -35,7 +64,38 @@ export function mergeImportSummaries(current: ImportSummary | null, incoming: Im
     assetMap.set(asset.id, asset);
   }
 
-  const assets = Array.from(assetMap.values()).sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+  return rebuildImportSummary({
+    ...current,
+    source: incoming.source,
+    pickedPaths: Array.from(new Set([...current.pickedPaths, ...incoming.pickedPaths]))
+  }, Array.from(assetMap.values()));
+}
+
+export function rebuildImportSummary(current: ImportSummary, assets: AssetRecord[]) {
+  const sortedAssets = [...assets].sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+  const timeline = buildTimeline(sortedAssets);
+  const featured = sortedAssets.filter((asset) => asset.isFeatured).slice(0, 3);
+
+  return {
+    source: current.source,
+    pickedPaths: current.pickedPaths,
+    assets: sortedAssets,
+    timeline,
+    story: {
+      id: current.story.id,
+      title: current.story.title,
+      summary: current.story.summary,
+      blocks: featured.map((asset, index) => ({
+        id: asset.id,
+        eyebrow: `章节 ${String(index + 1).padStart(2, '0')}`,
+        title: asset.caption?.title ?? asset.fileName.replace(/\.[^.]+$/, ''),
+        body: asset.caption?.body ?? '为图片、视频和文字保留共同出现的位置。'
+      }))
+    }
+  } satisfies ImportSummary;
+}
+
+function buildTimeline(assets: AssetRecord[]) {
   const grouped = new Map<string, AssetRecord[]>();
 
   for (const asset of assets) {
@@ -45,7 +105,7 @@ export function mergeImportSummaries(current: ImportSummary | null, incoming: Im
     grouped.set(key, collection);
   }
 
-  const timeline = Array.from(grouped.entries())
+  return Array.from(grouped.entries())
     .sort((left, right) => right[0].localeCompare(left[0]))
     .map(([key, groupAssets]) => ({
       id: key,
@@ -53,26 +113,6 @@ export function mergeImportSummaries(current: ImportSummary | null, incoming: Im
       coverTitle: (groupAssets[0]?.caption?.title ?? groupAssets[0]?.fileName ?? '未命名作品').replace(/\.[^.]+$/, ''),
       assets: groupAssets.sort((left, right) => right.capturedAt.localeCompare(left.capturedAt))
     }));
-
-  const featured = assets.filter((asset) => asset.isFeatured).slice(0, 3);
-
-  return {
-    source: incoming.source,
-    pickedPaths: Array.from(new Set([...current.pickedPaths, ...incoming.pickedPaths])),
-    assets,
-    timeline,
-    story: {
-      id: 'story-featured',
-      title: '本期精选画册',
-      summary: '把导入的作品重新编排为适合安静观看的一段视觉章节。',
-      blocks: featured.map((asset, index) => ({
-        id: asset.id,
-        eyebrow: `章节 ${String(index + 1).padStart(2, '0')}`,
-        title: asset.caption?.title ?? asset.fileName.replace(/\.[^.]+$/, ''),
-        body: asset.caption?.body ?? '为图片、视频和文字保留共同出现的位置。'
-      }))
-    }
-  } satisfies ImportSummary;
 }
 
 export function filterTimeline(groups: TimelineGroup[], hiddenAssetIds: Set<string>): TimelineGroup[] {

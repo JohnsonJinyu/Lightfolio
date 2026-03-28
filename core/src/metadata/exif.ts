@@ -4,6 +4,9 @@ export interface ExifSnapshot {
   capturedAt?: string;
   cameraModel?: string;
   lensModel?: string;
+  aperture?: number;
+  shutterSpeed?: number;
+  iso?: number;
 }
 
 interface RawExifFields {
@@ -13,6 +16,10 @@ interface RawExifFields {
   Model?: string;
   LensModel?: string;
   LensInfo?: string;
+  FNumber?: number | string;
+  ExposureTime?: number | string;
+  ISO?: number | string;
+  PhotographicSensitivity?: number | string;
 }
 
 const exifExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp']);
@@ -54,6 +61,37 @@ function normalizeDate(value: Date | string | undefined): string | undefined {
 function normalizeText(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function normalizeNumeric(value: number | string | undefined): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (trimmed.includes('/')) {
+    const [numeratorRaw, denominatorRaw] = trimmed.split('/');
+    const numerator = Number(numeratorRaw);
+    const denominator = Number(denominatorRaw);
+
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+      return undefined;
+    }
+
+    return numerator / denominator;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function normalizeCameraModel(make: string | undefined, model: string | undefined) {
@@ -110,7 +148,7 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
 
   try {
     const raw = await exifr.parse(filePath, {
-      pick: ['DateTimeOriginal', 'CreateDate', 'Make', 'Model', 'LensModel', 'LensInfo']
+      pick: ['DateTimeOriginal', 'CreateDate', 'Make', 'Model', 'LensModel', 'LensInfo', 'FNumber', 'ExposureTime', 'ISO', 'PhotographicSensitivity']
     });
 
     if (!raw) {
@@ -120,7 +158,10 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
     return {
       capturedAt: normalizeDate(raw.DateTimeOriginal ?? raw.CreateDate),
       cameraModel: normalizeCameraModel(raw.Make, raw.Model),
-      lensModel: normalizeText(raw.LensModel ?? raw.LensInfo)
+      lensModel: normalizeText(raw.LensModel ?? raw.LensInfo),
+      aperture: normalizeNumeric(raw.FNumber),
+      shutterSpeed: normalizeNumeric(raw.ExposureTime),
+      iso: normalizeNumeric(raw.ISO ?? raw.PhotographicSensitivity)
     };
   } catch {
     return {};

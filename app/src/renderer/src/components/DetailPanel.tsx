@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react';
+import type React from 'react';
+
 import type { AssetRecord } from '@lightfolio/shared';
 
 import type { DetailSectionKey } from '../types/ui';
-import { folderFromPath, formatDateTime } from '../utils/library';
+import { folderFromPath, formatAperture, formatDateTime, formatIso, formatShutterSpeed } from '../utils/library';
 
 interface DetailPanelProps {
   asset: AssetRecord;
@@ -11,7 +14,11 @@ interface DetailPanelProps {
   collapsedSections: Record<DetailSectionKey, boolean>;
   onTogglePanel: () => void;
   onToggleSection: (section: DetailSectionKey) => void;
-  onWheel: (event: React.WheelEvent) => void;
+  onUpdateCaption: (caption: AssetRecord['caption']) => void;
+  onAddTag: (label: string) => void;
+  onRemoveTag: (tagId: string) => void;
+  onToggleFavorite: () => void;
+  onToggleFeatured: () => void;
 }
 
 export function DetailPanel({
@@ -22,10 +29,77 @@ export function DetailPanel({
   collapsedSections,
   onTogglePanel,
   onToggleSection,
-  onWheel
+  onUpdateCaption,
+  onAddTag,
+  onRemoveTag,
+  onToggleFavorite,
+  onToggleFeatured
 }: DetailPanelProps) {
+  const [titleInput, setTitleInput] = useState(asset.caption?.title ?? '');
+  const [bodyInput, setBodyInput] = useState(asset.caption?.body ?? '');
+  const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    setTitleInput(asset.caption?.title ?? '');
+    setBodyInput(asset.caption?.body ?? '');
+    setTagInput('');
+  }, [asset.caption?.body, asset.caption?.title, asset.id]);
+
+  function commitCaption(nextTitle: string, nextBody: string) {
+    const normalizedTitle = nextTitle.trim();
+    const normalizedBody = nextBody.trim();
+
+    if ((asset.caption?.title ?? '') === normalizedTitle && (asset.caption?.body ?? '') === normalizedBody) {
+      return;
+    }
+
+    onUpdateCaption(
+      normalizedTitle || normalizedBody
+        ? {
+            ...(normalizedTitle ? { title: normalizedTitle } : {}),
+            ...(normalizedBody ? { body: normalizedBody } : {})
+          }
+        : undefined
+    );
+  }
+
+  function handleTitleBlur() {
+    commitCaption(titleInput, bodyInput);
+  }
+
+  function handleBodyBlur() {
+    commitCaption(titleInput, bodyInput);
+  }
+
+  function handleTitleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+    commitCaption(titleInput, bodyInput);
+    event.currentTarget.blur();
+  }
+
+  function handleTagSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedLabel = tagInput.trim();
+
+    if (!normalizedLabel) {
+      return;
+    }
+
+    onAddTag(normalizedLabel);
+    setTagInput('');
+  }
+
+  function handlePanelWheelCapture(event: React.WheelEvent<HTMLElement>) {
+    event.stopPropagation();
+  }
+
   return (
-    <aside className={`detail-panel-shell ${isCollapsed ? 'detail-panel-shell-collapsed' : ''}`} onWheel={onWheel}>
+    <aside className={`detail-panel-shell ${isCollapsed ? 'detail-panel-shell-collapsed' : ''}`} onWheelCapture={handlePanelWheelCapture}>
       <button
         className={`edge-toggle detail-panel-toggle ${isCollapsed ? 'detail-panel-toggle-collapsed' : ''}`}
         type="button"
@@ -35,18 +109,34 @@ export function DetailPanel({
       >
         <span className="edge-toggle-icon" aria-hidden="true">{isCollapsed ? '‹' : '›'}</span>
       </button>
-      <div className={`detail-panel-content ${isCollapsed ? 'detail-panel-content-hidden' : ''}`} aria-hidden={isCollapsed}>
-        <div className="detail-panel">
+      <div className={`detail-panel-content ${isCollapsed ? 'detail-panel-content-hidden' : ''}`} aria-hidden={isCollapsed} onWheelCapture={handlePanelWheelCapture}>
+        <div className="detail-panel" onWheelCapture={handlePanelWheelCapture}>
           <div className="detail-panel-header">
             <div>
               <span className="detail-eyebrow">当前作品</span>
-              <h3>{asset.caption?.title ?? asset.fileName}</h3>
+              <input
+                className="detail-title-input"
+                type="text"
+                value={titleInput}
+                placeholder={asset.fileName.replace(/\.[^.]+$/, '')}
+                aria-label="作品标题"
+                onChange={(event) => setTitleInput(event.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={handleTitleKeyDown}
+              />
             </div>
             <div className="detail-panel-header-actions">
+              {asset.isFavorite ? <span className="detail-badge detail-badge-favorite">收藏</span> : null}
               {asset.isFeatured ? <span className="detail-badge">精选</span> : null}
+              <button className={`button button-ghost detail-action-button ${asset.isFavorite ? 'detail-action-button-active' : ''}`} type="button" onClick={onToggleFavorite}>
+                {asset.isFavorite ? '取消收藏' : '加入收藏'}
+              </button>
+              <button className={`button button-ghost detail-action-button ${asset.isFeatured ? 'detail-action-button-active' : ''}`} type="button" onClick={onToggleFeatured}>
+                {asset.isFeatured ? '取消精选' : '设为精选'}
+              </button>
             </div>
           </div>
-          <p className="detail-description">{asset.caption?.body ?? '右键主图或下方胶卷缩略图，可执行打开、移除和删除操作。'}</p>
+          <p className="detail-description">支持直接编辑标题、说明和标签，修改会自动保存到本地相册索引。</p>
           <div className="detail-grid">
             <div className="detail-card">
               <span>拍摄时间</span>
@@ -64,6 +154,18 @@ export function DetailPanel({
               <span>镜头</span>
               <strong>{asset.lensModel ?? '未读取到镜头信息'}</strong>
             </div>
+            <div className="detail-card">
+              <span>光圈</span>
+              <strong>{formatAperture(asset.aperture)}</strong>
+            </div>
+            <div className="detail-card">
+              <span>快门</span>
+              <strong>{formatShutterSpeed(asset.shutterSpeed)}</strong>
+            </div>
+            <div className="detail-card">
+              <span>ISO</span>
+              <strong>{formatIso(asset.iso)}</strong>
+            </div>
           </div>
           <div className={`detail-section ${collapsedSections.description ? 'detail-section-collapsed' : ''}`}>
             <button className="detail-section-toggle" onClick={() => onToggleSection('description')}>
@@ -72,7 +174,16 @@ export function DetailPanel({
             </button>
             {!collapsedSections.description ? (
               <div className="detail-section-body">
-                <p>{asset.caption?.body ?? '这张作品还没有补充说明。'}</p>
+                <textarea
+                  className="detail-textarea"
+                  value={bodyInput}
+                  placeholder="补充这张作品的想法、拍摄背景或后期说明。"
+                  rows={5}
+                  aria-label="作品说明"
+                  onChange={(event) => setBodyInput(event.target.value)}
+                  onBlur={handleBodyBlur}
+                />
+                <p className="detail-save-hint">失焦后自动保存。标题留空时会回退显示文件名。</p>
               </div>
             ) : null}
           </div>
@@ -85,9 +196,23 @@ export function DetailPanel({
               <div className="detail-section-body">
                 <div className="detail-tags">
                   {detailTags.length > 0 ? detailTags.map((tag) => (
-                    <span key={tag.id} className="detail-tag">{tag.label}</span>
+                    <button key={tag.id} className="detail-tag detail-tag-button" type="button" onClick={() => onRemoveTag(tag.id)}>
+                      {tag.label}
+                      <span aria-hidden="true">×</span>
+                    </button>
                   )) : <span className="detail-tag detail-tag-muted">暂无标签</span>}
                 </div>
+                <form className="detail-tag-form" onSubmit={handleTagSubmit}>
+                  <input
+                    className="detail-tag-input"
+                    type="text"
+                    value={tagInput}
+                    placeholder="输入标签后回车"
+                    aria-label="添加标签"
+                    onChange={(event) => setTagInput(event.target.value)}
+                  />
+                  <button className="button button-ghost detail-tag-submit" type="submit">添加</button>
+                </form>
               </div>
             ) : null}
           </div>

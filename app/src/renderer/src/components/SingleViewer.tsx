@@ -20,6 +20,11 @@ interface SingleViewerProps {
   onOpenAssetMenu: (event: React.MouseEvent, assetId: string) => void;
   onToggleDetailPanel: () => void;
   onToggleDetailSection: (section: DetailSectionKey) => void;
+  onUpdateCaption: (caption: AssetRecord['caption']) => void;
+  onAddTag: (label: string) => void;
+  onRemoveTag: (tagId: string) => void;
+  onToggleFavorite: () => void;
+  onToggleFeatured: () => void;
   onPreviewError: (assetId: string) => void;
 }
 
@@ -36,6 +41,11 @@ export function SingleViewer({
   onOpenAssetMenu,
   onToggleDetailPanel,
   onToggleDetailSection,
+  onUpdateCaption,
+  onAddTag,
+  onRemoveTag,
+  onToggleFavorite,
+  onToggleFeatured,
   onPreviewError
 }: SingleViewerProps) {
   return (
@@ -70,7 +80,11 @@ export function SingleViewer({
           collapsedSections={collapsedDetailSections}
           onTogglePanel={onToggleDetailPanel}
           onToggleSection={onToggleDetailSection}
-          onWheel={onWheel}
+          onUpdateCaption={onUpdateCaption}
+          onAddTag={onAddTag}
+          onRemoveTag={onRemoveTag}
+          onToggleFavorite={onToggleFavorite}
+          onToggleFeatured={onToggleFeatured}
         />
       </div>
     </article>

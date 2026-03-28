@@ -116,6 +116,9 @@ export async function createImportSummary(paths: string[], source: ImportSourceK
         importedAt,
         cameraModel: exif.cameraModel,
         lensModel: exif.lensModel,
+        aperture: exif.aperture,
+        shutterSpeed: exif.shutterSpeed,
+        iso: exif.iso,
         location: {
           label: '待手动标记地点'
         },
@@ -124,6 +127,7 @@ export async function createImportSummary(paths: string[], source: ImportSourceK
           { id: `${assetId}-tag-featured`, label: index < 3 ? '精选' : '归档' }
         ],
         caption: defaultCaptions[index % defaultCaptions.length],
+        isFavorite: false,
         isFeatured: index < 4
       } satisfies AssetRecord;
     }));

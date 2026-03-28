@@ -6,11 +6,31 @@ interface FolderItem {
   count: number;
 }
 
+interface TagItem {
+  label: string;
+  count: number;
+}
+
+interface NamedFilterItem {
+  label: string;
+  count: number;
+}
+
 interface SidebarProps {
   isSidebarCollapsed: boolean;
   isFolderListCollapsed: boolean;
   activeFolder: string;
   folderItems: FolderItem[];
+  favoriteCount: number;
+  featuredCount: number;
+  favoriteOnly: boolean;
+  featuredOnly: boolean;
+  activeTag: string | null;
+  tagItems: TagItem[];
+  activeCamera: string | null;
+  cameraItems: NamedFilterItem[];
+  activeLens: string | null;
+  lensItems: NamedFilterItem[];
   filteredAssetsCount: number;
   totalAssets: number;
   warmupProgress: WarmupProgress;
@@ -20,6 +40,11 @@ interface SidebarProps {
   onSelectAllFolders: () => void;
   onToggleFolderList: () => void;
   onSelectFolder: (path: string) => void;
+  onToggleFavoriteOnly: () => void;
+  onToggleFeaturedOnly: () => void;
+  onSelectTag: (label: string | null) => void;
+  onSelectCamera: (label: string | null) => void;
+  onSelectLens: (label: string | null) => void;
   onRetryFailedPreviews: () => void;
   onImport: (mode: 'files' | 'directory') => void;
 }
@@ -29,6 +54,16 @@ export function Sidebar({
   isFolderListCollapsed,
   activeFolder,
   folderItems,
+  favoriteCount,
+  featuredCount,
+  favoriteOnly,
+  featuredOnly,
+  activeTag,
+  tagItems,
+  activeCamera,
+  cameraItems,
+  activeLens,
+  lensItems,
   filteredAssetsCount,
   totalAssets,
   warmupProgress,
@@ -38,6 +73,11 @@ export function Sidebar({
   onSelectAllFolders,
   onToggleFolderList,
   onSelectFolder,
+  onToggleFavoriteOnly,
+  onToggleFeaturedOnly,
+  onSelectTag,
+  onSelectCamera,
+  onSelectLens,
   onRetryFailedPreviews,
   onImport
 }: SidebarProps) {
@@ -79,6 +119,22 @@ export function Sidebar({
         ) : null}
         {!isFolderListCollapsed ? (
           <div className="sidebar-scroll">
+            <section className="sidebar-tag-section">
+              <div className="sidebar-subhead">
+                <h3>快捷入口</h3>
+                <span>回看与展示</span>
+              </div>
+              <div className="folder-list">
+                <button className={`folder-item ${favoriteOnly ? 'folder-item-active' : ''}`} onClick={onToggleFavoriteOnly}>
+                  <span>收藏作品</span>
+                  <em>{favoriteCount}</em>
+                </button>
+                <button className={`folder-item ${featuredOnly ? 'folder-item-active' : ''}`} onClick={onToggleFeaturedOnly}>
+                  <span>精选作品</span>
+                  <em>{featuredCount}</em>
+                </button>
+              </div>
+            </section>
             <button className={`folder-item ${activeFolder === 'all' ? 'folder-item-active' : ''}`} onClick={onSelectAllFolders}>
               <span>全部照片</span>
               <em>{totalAssets}</em>
@@ -96,6 +152,75 @@ export function Sidebar({
                 </button>
               ))}
             </div>
+            {tagItems.length > 0 ? (
+              <section className="sidebar-tag-section">
+                <div className="sidebar-subhead">
+                  <h3>常用标签</h3>
+                  <span>{tagItems.length} 个</span>
+                </div>
+                <div className="sidebar-tag-list">
+                  <button className={`sidebar-tag-filter ${activeTag === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectTag(null)}>
+                    <span>全部标签</span>
+                  </button>
+                  {tagItems.map((tag) => (
+                    <button
+                      key={tag.label}
+                      className={`sidebar-tag-filter ${activeTag === tag.label ? 'sidebar-tag-filter-active' : ''}`}
+                      onClick={() => onSelectTag(activeTag === tag.label ? null : tag.label)}
+                    >
+                      <span>{tag.label}</span>
+                      <em>{tag.count}</em>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {cameraItems.length > 0 ? (
+              <section className="sidebar-tag-section">
+                <div className="sidebar-subhead">
+                  <h3>拍摄设备</h3>
+                  <span>{cameraItems.length} 台</span>
+                </div>
+                <div className="sidebar-tag-list">
+                  <button className={`sidebar-tag-filter ${activeCamera === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectCamera(null)}>
+                    <span>全部设备</span>
+                  </button>
+                  {cameraItems.map((camera) => (
+                    <button
+                      key={camera.label}
+                      className={`sidebar-tag-filter ${activeCamera === camera.label ? 'sidebar-tag-filter-active' : ''}`}
+                      onClick={() => onSelectCamera(activeCamera === camera.label ? null : camera.label)}
+                    >
+                      <span>{camera.label}</span>
+                      <em>{camera.count}</em>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {lensItems.length > 0 ? (
+              <section className="sidebar-tag-section">
+                <div className="sidebar-subhead">
+                  <h3>镜头</h3>
+                  <span>{lensItems.length} 支</span>
+                </div>
+                <div className="sidebar-tag-list">
+                  <button className={`sidebar-tag-filter ${activeLens === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectLens(null)}>
+                    <span>全部镜头</span>
+                  </button>
+                  {lensItems.map((lens) => (
+                    <button
+                      key={lens.label}
+                      className={`sidebar-tag-filter ${activeLens === lens.label ? 'sidebar-tag-filter-active' : ''}`}
+                      onClick={() => onSelectLens(activeLens === lens.label ? null : lens.label)}
+                    >
+                      <span>{lens.label}</span>
+                      <em>{lens.count}</em>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         ) : null}
         {previewFailureCount > 0 ? (

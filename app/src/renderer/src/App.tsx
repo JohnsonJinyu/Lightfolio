@@ -15,8 +15,8 @@ import {
   WaterfallGrid
 } from './components';
 import { useAssetBrowser, useThumbnailWarmup, useViewerChrome } from './hooks';
-import type { ToastState } from './types';
-import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage } from './utils';
+import type { BrowserFilters, ToastState } from './types';
+import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage, rebuildImportSummary } from './utils';
 
 export function App() {
   const [importState, setImportState] = useState<ImportSummary | null>(null);
@@ -28,6 +28,15 @@ export function App() {
   const [failedPreviewIds, setFailedPreviewIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pendingDeleteAsset, setPendingDeleteAsset] = useState<AssetRecord | null>(null);
+  const [filters, setFilters] = useState<BrowserFilters>({
+    searchQuery: '',
+    mediaFilter: 'all',
+    activeTag: null,
+    activeCamera: null,
+    activeLens: null,
+    favoriteOnly: false,
+    featuredOnly: false
+  });
   const { warmupProgress, setWarmupProgress, warmupThumbnails } = useThumbnailWarmup();
 
   const sourceTimeline = importState?.timeline ?? (isLibraryReady ? [] : bootTimeline);
@@ -46,18 +55,74 @@ export function App() {
       .map(([path, count]) => ({ path, count }))
       .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
   }, [visibleAssets]);
+  const tagItems = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const asset of visibleAssets) {
+      for (const tag of asset.tags) {
+        map.set(tag.label, (map.get(tag.label) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'zh-CN'))
+      .slice(0, 16);
+  }, [visibleAssets]);
+  const cameraItems = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const asset of visibleAssets) {
+      if (!asset.cameraModel) {
+        continue;
+      }
+
+      map.set(asset.cameraModel, (map.get(asset.cameraModel) ?? 0) + 1);
+    }
+
+    return Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'zh-CN'))
+      .slice(0, 12);
+  }, [visibleAssets]);
+  const lensItems = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const asset of visibleAssets) {
+      if (!asset.lensModel) {
+        continue;
+      }
+
+      map.set(asset.lensModel, (map.get(asset.lensModel) ?? 0) + 1);
+    }
+
+    return Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'zh-CN'))
+      .slice(0, 12);
+  }, [visibleAssets]);
   const removedAssets = useMemo(
     () => removedFromAlbumIds.map((assetId) => assetMap.get(assetId)).filter((asset): asset is AssetRecord => Boolean(asset)),
     [assetMap, removedFromAlbumIds]
   );
   const previewFailureCount = failedPreviewIds.size;
   const totalAssets = visibleAssets.length;
+  const favoriteCount = useMemo(() => visibleAssets.filter((asset) => asset.isFavorite).length, [visibleAssets]);
+  const featuredCount = useMemo(() => visibleAssets.filter((asset) => asset.isFeatured).length, [visibleAssets]);
+  const hasActiveFilters = filters.searchQuery.trim().length > 0
+    || filters.mediaFilter !== 'all'
+    || filters.activeTag !== null
+    || filters.activeCamera !== null
+    || filters.activeLens !== null
+    || filters.favoriteOnly
+    || filters.featuredOnly;
   const activeSource = importState?.source === 'directory' ? '目录导入' : importState?.source === 'files' ? '文件导入' : '示例内容';
   const browser = useAssetBrowser({
     isLibraryReady,
     folderItems,
     visibleAssets,
-    failedPreviewIds
+    failedPreviewIds,
+    filters
   });
   const chrome = useViewerChrome(browser.selectById);
   const filteredAssets = browser.filteredAssets;
@@ -84,6 +149,15 @@ export function App() {
         );
         browser.setActiveFolder(snapshot.uiState?.activeFolder ?? 'all');
         browser.setViewMode(snapshot.uiState?.viewMode ?? 'single');
+        setFilters({
+          searchQuery: snapshot.uiState?.searchQuery ?? '',
+          mediaFilter: snapshot.uiState?.mediaFilter ?? 'all',
+          activeTag: snapshot.uiState?.activeTag ?? null,
+          activeCamera: snapshot.uiState?.activeCamera ?? null,
+          activeLens: snapshot.uiState?.activeLens ?? null,
+          favoriteOnly: snapshot.uiState?.favoriteOnly ?? false,
+          featuredOnly: snapshot.uiState?.featuredOnly ?? false
+        });
         chrome.setIsSidebarCollapsed(snapshot.uiState?.isSidebarCollapsed ?? false);
         chrome.setIsFolderListCollapsed(snapshot.uiState?.isFolderListCollapsed ?? false);
         chrome.setIsDetailPanelCollapsed(snapshot.uiState?.isDetailPanelCollapsed ?? false);
@@ -131,6 +205,13 @@ export function App() {
         selectedAssetId: browser.selectedAssetId,
         activeFolder: browser.activeFolder,
         viewMode: browser.viewMode,
+        searchQuery: filters.searchQuery,
+        mediaFilter: filters.mediaFilter,
+        activeTag: filters.activeTag,
+        activeCamera: filters.activeCamera,
+        activeLens: filters.activeLens,
+        favoriteOnly: filters.favoriteOnly,
+        featuredOnly: filters.featuredOnly,
         isSidebarCollapsed: chrome.isSidebarCollapsed,
         isFolderListCollapsed: chrome.isFolderListCollapsed,
         isDetailPanelCollapsed: chrome.isDetailPanelCollapsed,
@@ -140,7 +221,7 @@ export function App() {
     };
 
     void window.lightfolio.saveLibrary(snapshot);
-  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, hiddenAssetIds, importState, isLibraryReady, removedFromAlbumIds]);
+  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, hiddenAssetIds, importState, isLibraryReady, removedFromAlbumIds]);
 
   useEffect(() => {
     if (!toast) {
@@ -376,6 +457,154 @@ export function App() {
     });
   }
 
+  function updateAsset(assetId: string, updater: (asset: AssetRecord) => AssetRecord) {
+    let hasChanged = false;
+
+    setImportState((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      const nextAssets = previous.assets.map((asset) => {
+        if (asset.id !== assetId) {
+          return asset;
+        }
+
+        const updatedAsset = updater(asset);
+
+        if (updatedAsset !== asset) {
+          hasChanged = true;
+        }
+
+        return updatedAsset;
+      });
+
+      return hasChanged ? rebuildImportSummary(previous, nextAssets) : previous;
+    });
+
+    return hasChanged;
+  }
+
+  function updateSelectedCaption(caption: AssetRecord['caption']) {
+    if (!browser.selected) {
+      return;
+    }
+
+    updateAsset(browser.selected.id, (asset) => {
+      const nextTitle = caption?.title?.trim();
+      const nextBody = caption?.body?.trim();
+      const nextCaption = nextTitle || nextBody
+        ? {
+            ...(nextTitle ? { title: nextTitle } : {}),
+            ...(nextBody ? { body: nextBody } : {})
+          }
+        : undefined;
+
+      if (asset.caption?.title === nextCaption?.title && asset.caption?.body === nextCaption?.body) {
+        return asset;
+      }
+
+      return {
+        ...asset,
+        caption: nextCaption
+      };
+    });
+  }
+
+  function addSelectedTag(label: string) {
+    if (!browser.selected) {
+      return;
+    }
+
+    const normalizedLabel = label.trim();
+
+    if (!normalizedLabel) {
+      return;
+    }
+
+    updateAsset(browser.selected.id, (asset) => {
+      const exists = asset.tags.some((tag) => tag.label.localeCompare(normalizedLabel, 'zh-CN', { sensitivity: 'accent' }) === 0);
+
+      if (exists) {
+        return asset;
+      }
+
+      return {
+        ...asset,
+        tags: [
+          ...asset.tags,
+          {
+            id: `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            label: normalizedLabel
+          }
+        ]
+      };
+    });
+
+    if (!browser.selected.tags.some((tag) => tag.label.localeCompare(normalizedLabel, 'zh-CN', { sensitivity: 'accent' }) === 0)) {
+      setToast({
+        message: `已添加标签“${normalizedLabel}”`,
+        tone: 'info'
+      });
+    }
+  }
+
+  function removeSelectedTag(tagId: string) {
+    if (!browser.selected) {
+      return;
+    }
+
+    updateAsset(browser.selected.id, (asset) => {
+      const nextTags = asset.tags.filter((tag) => tag.id !== tagId);
+
+      if (nextTags.length === asset.tags.length) {
+        return asset;
+      }
+
+      return {
+        ...asset,
+        tags: nextTags
+      };
+    });
+
+    setToast({
+      message: '已移除标签',
+      tone: 'info'
+    });
+  }
+
+  function toggleSelectedFeatured() {
+    if (!browser.selected) {
+      return;
+    }
+
+    updateAsset(browser.selected.id, (asset) => ({
+      ...asset,
+      isFeatured: !asset.isFeatured
+    }));
+
+    setToast({
+      message: browser.selected.isFeatured ? '已取消精选' : '已加入精选',
+      tone: 'info'
+    });
+  }
+
+  function toggleSelectedFavorite() {
+    if (!browser.selected) {
+      return;
+    }
+
+    updateAsset(browser.selected.id, (asset) => ({
+      ...asset,
+      isFavorite: !asset.isFavorite
+    }));
+
+    setToast({
+      message: browser.selected.isFavorite ? '已取消收藏' : '已加入收藏',
+      tone: 'info'
+    });
+  }
+
   const contextMenuAssetId = chrome.contextMenu?.assetId ?? null;
   const contextAsset = contextMenuAssetId ? filteredAssets.find((asset) => asset.id === contextMenuAssetId) ?? null : null;
 
@@ -384,10 +613,26 @@ export function App() {
       <TopBar
         activeSource={activeSource}
         totalAssets={totalAssets}
+        filteredAssetsCount={filteredAssets.length}
         viewMode={browser.viewMode}
+        filters={filters}
+        hasActiveFilters={hasActiveFilters}
         removedAssetsCount={removedAssets.length}
         isBusy={isBusy}
         onShowShortcutHelp={() => chrome.setShowShortcutHelp(true)}
+        onClearFilters={() => setFilters({
+          searchQuery: '',
+          mediaFilter: 'all',
+          activeTag: null,
+          activeCamera: null,
+          activeLens: null,
+          favoriteOnly: false,
+          featuredOnly: false
+        })}
+        onSearchQueryChange={(value) => setFilters((previous) => ({ ...previous, searchQuery: value }))}
+        onMediaFilterChange={(value) => setFilters((previous) => ({ ...previous, mediaFilter: value }))}
+        onFavoriteOnlyChange={(value) => setFilters((previous) => ({ ...previous, favoriteOnly: value }))}
+        onFeaturedOnlyChange={(value) => setFilters((previous) => ({ ...previous, featuredOnly: value }))}
         onViewModeChange={browser.setViewMode}
         onRestoreAll={restoreAllFromAlbum}
       />
@@ -397,6 +642,16 @@ export function App() {
         isFolderListCollapsed={chrome.isFolderListCollapsed}
         activeFolder={browser.activeFolder}
         folderItems={folderItems}
+        favoriteCount={favoriteCount}
+        featuredCount={featuredCount}
+        favoriteOnly={filters.favoriteOnly}
+        featuredOnly={filters.featuredOnly}
+        activeTag={filters.activeTag}
+        tagItems={tagItems}
+        activeCamera={filters.activeCamera}
+        cameraItems={cameraItems}
+        activeLens={filters.activeLens}
+        lensItems={lensItems}
         filteredAssetsCount={filteredAssets.length}
         totalAssets={totalAssets}
         warmupProgress={warmupProgress}
@@ -412,6 +667,11 @@ export function App() {
           browser.setNavDirection('none');
           browser.setActiveFolder(path);
         }}
+        onToggleFavoriteOnly={() => setFilters((previous) => ({ ...previous, favoriteOnly: !previous.favoriteOnly }))}
+        onToggleFeaturedOnly={() => setFilters((previous) => ({ ...previous, featuredOnly: !previous.featuredOnly }))}
+        onSelectTag={(label) => setFilters((previous) => ({ ...previous, activeTag: label }))}
+        onSelectCamera={(label) => setFilters((previous) => ({ ...previous, activeCamera: label }))}
+        onSelectLens={(label) => setFilters((previous) => ({ ...previous, activeLens: label }))}
         onRetryFailedPreviews={retryFailedPreviews}
         onImport={runImport}
       />
@@ -441,6 +701,11 @@ export function App() {
                 onOpenAssetMenu={chrome.openAssetMenu}
                 onToggleDetailPanel={chrome.toggleDetailPanel}
                 onToggleDetailSection={chrome.toggleDetailSection}
+                onUpdateCaption={updateSelectedCaption}
+                onAddTag={addSelectedTag}
+                onRemoveTag={removeSelectedTag}
+                onToggleFavorite={toggleSelectedFavorite}
+                onToggleFeatured={toggleSelectedFeatured}
                 onPreviewError={markPreviewFailed}
               />
             ) : (
@@ -458,8 +723,8 @@ export function App() {
             )
           ) : (
             <div className="detail-empty">
-              <p>{importState ? '当前目录没有可展示的作品。' : '还没有导入任何作品。'}</p>
-              <p>{importState ? '可切换左侧目录，或恢复已移除资源。' : '先添加一个目录，Lightfolio 会为你构建时间轴。'}</p>
+              <p>{importState ? '当前筛选条件下没有可展示的作品。' : '还没有导入任何作品。'}</p>
+              <p>{importState ? '可清空搜索、调整筛选条件、切换左侧目录，或恢复已移除资源。' : '先添加一个目录，Lightfolio 会为你构建时间轴。'}</p>
             </div>
           )}
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AssetRecord } from '@lightfolio/shared';
 
 import { WATERFALL_GAP, WATERFALL_MIN_TILE_WIDTH } from '../constants/layout';
-import type { NavDirection, ViewMode, WaterfallLayoutMetrics } from '../types/ui';
+import type { BrowserFilters, NavDirection, ViewMode, WaterfallLayoutMetrics } from '../types/ui';
 import { folderFromPath } from '../utils/library';
 import { preloadImage } from '../utils/media';
 
@@ -12,6 +12,7 @@ interface UseAssetBrowserOptions {
   folderItems: Array<{ path: string; count: number }>;
   visibleAssets: AssetRecord[];
   failedPreviewIds: Set<string>;
+  filters: BrowserFilters;
 }
 
 interface WaterfallMetricsState {
@@ -20,7 +21,7 @@ interface WaterfallMetricsState {
   scrollTop: number;
 }
 
-export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, failedPreviewIds }: UseAssetBrowserOptions) {
+export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, failedPreviewIds, filters }: UseAssetBrowserOptions) {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('single');
@@ -32,12 +33,57 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
   const holdTimerRef = useRef<number | null>(null);
   const holdKeyRef = useRef<string | null>(null);
   const filteredAssets = useMemo(() => {
-    if (activeFolder === 'all') {
-      return visibleAssets;
-    }
+    const normalizedQuery = filters.searchQuery.trim().toLocaleLowerCase('zh-CN');
 
-    return visibleAssets.filter((asset) => folderFromPath(asset.filePath) === activeFolder);
-  }, [activeFolder, visibleAssets]);
+    return visibleAssets.filter((asset) => {
+      if (activeFolder !== 'all' && folderFromPath(asset.filePath) !== activeFolder) {
+        return false;
+      }
+
+      if (filters.mediaFilter !== 'all' && asset.kind !== filters.mediaFilter) {
+        return false;
+      }
+
+      if (filters.activeTag && !asset.tags.some((tag) => tag.label === filters.activeTag)) {
+        return false;
+      }
+
+      if (filters.activeCamera && asset.cameraModel !== filters.activeCamera) {
+        return false;
+      }
+
+      if (filters.activeLens && asset.lensModel !== filters.activeLens) {
+        return false;
+      }
+
+      if (filters.favoriteOnly && !asset.isFavorite) {
+        return false;
+      }
+
+      if (filters.featuredOnly && !asset.isFeatured) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = [
+        asset.fileName,
+        asset.caption?.title,
+        asset.caption?.body,
+        asset.cameraModel,
+        asset.lensModel,
+        asset.location?.label,
+        ...asset.tags.map((tag) => tag.label)
+      ]
+        .filter((value): value is string => Boolean(value))
+        .join(' ')
+        .toLocaleLowerCase('zh-CN');
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [activeFolder, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, visibleAssets]);
 
   const selected = selectedAssetId
     ? filteredAssets.find((asset) => asset.id === selectedAssetId) ?? filteredAssets[0] ?? null

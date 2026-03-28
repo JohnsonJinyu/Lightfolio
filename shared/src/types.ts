@@ -8,8 +8,8 @@ export interface AssetTag {
 }
 
 export interface AssetCaption {
-  title: string;
-  body: string;
+  title?: string;
+  body?: string;
 }
 
 export interface AssetLocation {
@@ -30,9 +30,13 @@ export interface AssetRecord {
   importedAt: string;
   cameraModel?: string;
   lensModel?: string;
+  aperture?: number;
+  shutterSpeed?: number;
+  iso?: number;
   location?: AssetLocation;
   tags: AssetTag[];
   caption?: AssetCaption;
+  isFavorite: boolean;
   isFeatured: boolean;
 }
 
@@ -69,6 +73,13 @@ export interface LibraryViewState {
   selectedAssetId: string | null;
   activeFolder: string;
   viewMode: 'single' | 'waterfall';
+  searchQuery?: string;
+  mediaFilter?: 'all' | AssetKind;
+  activeTag?: string | null;
+  activeCamera?: string | null;
+  activeLens?: string | null;
+  favoriteOnly?: boolean;
+  featuredOnly?: boolean;
   isSidebarCollapsed: boolean;
   isFolderListCollapsed: boolean;
   isDetailPanelCollapsed: boolean;
