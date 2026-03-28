@@ -13,12 +13,10 @@ function clamp(value: number, min: number, max: number) {
 
 export function ProgressiveSingleImage({
   asset,
-  onError,
-  onZoomAnimationChange
+  onError
 }: {
   asset: AssetRecord;
   onError: () => void;
-  onZoomAnimationChange?: (isAnimating: boolean) => void;
 }) {
   const fullSource = useMemo(() => getFileUrlCached(asset.filePath, 'full'), [asset.filePath]);
   const [displayedImage, setDisplayedImage] = useState<{ src: string; alt: string; width: number; height: number } | null>(null);
@@ -41,10 +39,6 @@ export function ProgressiveSingleImage({
   useEffect(() => {
     displayedImageRef.current = displayedImage;
   }, [displayedImage]);
-
-  useEffect(() => {
-    onZoomAnimationChange?.(isZoomAnimating);
-  }, [isZoomAnimating, onZoomAnimationChange]);
 
   useEffect(() => {
     const element = stageRef.current;
@@ -167,8 +161,11 @@ export function ProgressiveSingleImage({
   }, [fitZoomPercent]);
 
   const currentZoomPercent = zoomPercent ?? fitZoomPercent;
-  const renderedWidth = displayedImage ? displayedImage.width * (currentZoomPercent / 100) : 0;
-  const renderedHeight = displayedImage ? displayedImage.height * (currentZoomPercent / 100) : 0;
+  const baseWidth = displayedImage ? displayedImage.width * (fitZoomPercent / 100) : 0;
+  const baseHeight = displayedImage ? displayedImage.height * (fitZoomPercent / 100) : 0;
+  const zoomScale = fitZoomPercent > 0 ? currentZoomPercent / fitZoomPercent : 1;
+  const renderedWidth = baseWidth * zoomScale;
+  const renderedHeight = baseHeight * zoomScale;
   const maxPanX = Math.max(0, (renderedWidth - containerSize.width) / 2);
   const maxPanY = Math.max(0, (renderedHeight - containerSize.height) / 2);
   const canPan = maxPanX > 0 || maxPanY > 0;
@@ -324,25 +321,31 @@ export function ProgressiveSingleImage({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      title="双击切换 100% 缩放，按住 Ctrl + 滚轮可连续缩放"
     >
       <div className="progressive-stage-ambient" aria-hidden="true" />
       {displayedImage ? (
-        <img
-          className={`detail-media detail-media-full detail-media-layer-current ${currentZoomPercent > fitZoomPercent + 1 ? 'detail-media-zoomed' : ''} ${isZoomAnimating ? 'detail-media-zoom-animating' : ''}`}
-          src={displayedImage.src}
-          alt={displayedImage.alt}
-          decoding="async"
-          onError={onError}
-          draggable={false}
+        <div
+          className={`detail-media-shell ${isZoomAnimating ? 'detail-media-shell-zoom-animating' : ''}`}
           style={{
-            width: `${renderedWidth}px`,
-            height: `${renderedHeight}px`,
             left: '50%',
             top: '50%',
             transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))`
           }}
-        />
+        >
+          <img
+            className={`detail-media detail-media-full detail-media-layer-current ${currentZoomPercent > fitZoomPercent + 1 ? 'detail-media-zoomed' : ''} ${isZoomAnimating ? 'detail-media-zoom-animating' : ''}`}
+            src={displayedImage.src}
+            alt={displayedImage.alt}
+            decoding="async"
+            onError={onError}
+            draggable={false}
+            style={{
+              width: `${baseWidth}px`,
+              height: `${baseHeight}px`,
+              transform: `scale(${zoomScale})`
+            }}
+          />
+        </div>
       ) : null}
       <div className="viewer-zoom-controls" onPointerDown={(event) => event.stopPropagation()}>
         <button className="viewer-zoom-button" type="button" onClick={() => applyZoom(currentZoomPercent - 10, { animate: true })} aria-label="缩小">-</button>

@@ -39,28 +39,30 @@ export function DetailPanel({
   onToggleFavorite,
   onToggleFeatured
 }: DetailPanelProps) {
-  const [titleInput, setTitleInput] = useState(asset.caption?.title ?? '');
+  const fallbackTitle = asset.fileName.replace(/\.[^.]+$/, '');
+  const [titleInput, setTitleInput] = useState(asset.caption?.title ?? fallbackTitle);
   const [bodyInput, setBodyInput] = useState(asset.caption?.body ?? '');
   const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
-    setTitleInput(asset.caption?.title ?? '');
+    setTitleInput(asset.caption?.title ?? fallbackTitle);
     setBodyInput(asset.caption?.body ?? '');
     setTagInput('');
-  }, [asset.caption?.body, asset.caption?.title, asset.id]);
+  }, [asset.caption?.body, asset.caption?.title, asset.id, fallbackTitle]);
 
   function commitCaption(nextTitle: string, nextBody: string) {
     const normalizedTitle = nextTitle.trim();
     const normalizedBody = nextBody.trim();
+    const persistedTitle = normalizedTitle === fallbackTitle ? '' : normalizedTitle;
 
-    if ((asset.caption?.title ?? '') === normalizedTitle && (asset.caption?.body ?? '') === normalizedBody) {
+    if ((asset.caption?.title ?? '') === persistedTitle && (asset.caption?.body ?? '') === normalizedBody) {
       return;
     }
 
     onUpdateCaption(
-      normalizedTitle || normalizedBody
+      persistedTitle || normalizedBody
         ? {
-            ...(normalizedTitle ? { title: normalizedTitle } : {}),
+            ...(persistedTitle ? { title: persistedTitle } : {}),
             ...(normalizedBody ? { body: normalizedBody } : {})
           }
         : undefined
@@ -157,22 +159,18 @@ export function DetailPanel({
       body: (
         <div className="detail-section-body">
           <dl className="detail-list">
-            <div>
-              <dt>文件名</dt>
-              <dd>{asset.fileName}</dd>
-            </div>
-            <div>
-              <dt>导入时间</dt>
-              <dd>{formatDateTime(asset.importedAt)}</dd>
-            </div>
-            <div>
-              <dt>尺寸</dt>
-              <dd>{asset.pixelWidth && asset.pixelHeight ? `${asset.pixelWidth} × ${asset.pixelHeight}` : '待补充'}</dd>
-            </div>
-            <div>
-              <dt>地点</dt>
-              <dd>{asset.location?.label ?? '待手动标记地点'}</dd>
-            </div>
+                <div>
+                  <dt>导入时间</dt>
+                  <dd>{formatDateTime(asset.importedAt)}</dd>
+                </div>
+                <div>
+                  <dt>尺寸</dt>
+                  <dd>{asset.pixelWidth && asset.pixelHeight ? `${asset.pixelWidth} × ${asset.pixelHeight}` : '待补充'}</dd>
+                </div>
+                <div>
+                  <dt>地点</dt>
+                  <dd>{asset.location?.label ?? '待手动标记地点'}</dd>
+                </div>
           </dl>
         </div>
       )
@@ -203,12 +201,11 @@ export function DetailPanel({
         <div className="detail-panel" onWheelCapture={handlePanelWheelCapture}>
           <div className="detail-panel-header">
             <div>
-              <span className="detail-eyebrow">当前作品</span>
               <input
                 className="detail-title-input"
                 type="text"
                 value={titleInput}
-                placeholder={asset.fileName.replace(/\.[^.]+$/, '')}
+                placeholder={fallbackTitle}
                 aria-label="作品标题"
                 onChange={(event) => setTitleInput(event.target.value)}
                 onBlur={handleTitleBlur}
@@ -218,8 +215,14 @@ export function DetailPanel({
             <div className="detail-panel-header-actions">
               {asset.isFavorite ? <span className="detail-badge detail-badge-favorite">收藏</span> : null}
               {asset.isFeatured ? <span className="detail-badge">精选</span> : null}
-              <button className={`button button-ghost detail-action-button ${asset.isFavorite ? 'detail-action-button-active' : ''}`} type="button" onClick={onToggleFavorite}>
-                {asset.isFavorite ? '取消收藏' : '加入收藏'}
+              <button
+                className={`button button-ghost detail-action-button detail-action-button-icon ${asset.isFavorite ? 'detail-action-button-active detail-action-button-favorite-active' : ''}`}
+                type="button"
+                aria-label={asset.isFavorite ? '取消收藏' : '加入收藏'}
+                title={asset.isFavorite ? '取消收藏' : '加入收藏'}
+                onClick={onToggleFavorite}
+              >
+                <span className="detail-action-icon" aria-hidden="true">♥</span>
               </button>
               <button className={`button button-ghost detail-action-button ${asset.isFeatured ? 'detail-action-button-active' : ''}`} type="button" onClick={onToggleFeatured}>
                 {asset.isFeatured ? '取消精选' : '设为精选'}
