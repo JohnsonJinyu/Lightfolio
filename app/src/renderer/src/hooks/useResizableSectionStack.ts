@@ -9,6 +9,8 @@ interface ResizeSession<T extends string> {
   lowerHeight: number;
 }
 
+const minimumPairResizeSlack = 24;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -21,13 +23,20 @@ export function useResizableSectionStack<T extends string>(
   defaultSizes: Record<T, number>,
   minHeight = 88,
   persistedSizes?: Partial<Record<T, number>>,
+  minimumSizes?: Partial<Record<T, number>>,
   onSizesChange?: (sizes: Record<T, number>) => void
 ) {
+  function resolveMinimumSize(key: T) {
+    return Math.max(minHeight, minimumSizes?.[key] ?? 0);
+  }
+
   const mergedInitialSizes = {
     ...defaultSizes,
     ...persistedSizes
   } as Record<T, number>;
-  const [sizes, setSizes] = useState<Record<T, number>>(mergedInitialSizes);
+  const [sizes, setSizes] = useState<Record<T, number>>(() => Object.fromEntries(
+    Object.entries(mergedInitialSizes).map(([key, value]) => [key, Math.max(value as number, resolveMinimumSize(key as T))])
+  ) as Record<T, number>);
   const [activeDivider, setActiveDivider] = useState<string | null>(null);
   const sessionRef = useRef<ResizeSession<T> | null>(null);
 
@@ -37,8 +46,12 @@ export function useResizableSectionStack<T extends string>(
       ...persistedSizes
     } as Record<T, number>;
 
-    setSizes((previous) => areSizesEqual(previous, nextSizes) ? previous : nextSizes);
-  }, [defaultSizes, persistedSizes]);
+    const clampedSizes = Object.fromEntries(
+      Object.entries(nextSizes).map(([key, value]) => [key, Math.max(value as number, resolveMinimumSize(key as T))])
+    ) as Record<T, number>;
+
+    setSizes((previous) => areSizesEqual(previous, clampedSizes) ? previous : clampedSizes);
+  }, [defaultSizes, minimumSizes, persistedSizes]);
 
   useEffect(() => {
     if (activeDivider !== null) {
@@ -62,8 +75,10 @@ export function useResizableSectionStack<T extends string>(
   }, [sizes]);
 
   const resetSizes = useCallback(() => {
-    setSizes({ ...defaultSizes });
-  }, [defaultSizes]);
+    setSizes(Object.fromEntries(
+      Object.entries(defaultSizes).map(([key, value]) => [key, Math.max(value as number, resolveMinimumSize(key as T))])
+    ) as Record<T, number>);
+  }, [defaultSizes, minimumSizes]);
 
   useEffect(() => {
     if (!activeDivider) {
@@ -77,8 +92,13 @@ export function useResizableSectionStack<T extends string>(
         return;
       }
 
-      const pairTotal = session.upperHeight + session.lowerHeight;
-      const nextUpper = clamp(session.upperHeight + (event.clientY - session.startY), minHeight, pairTotal - minHeight);
+      const upperMin = resolveMinimumSize(session.upperKey);
+      const lowerMin = resolveMinimumSize(session.lowerKey);
+      const pairTotal = Math.max(
+        session.upperHeight + session.lowerHeight,
+        upperMin + lowerMin + minimumPairResizeSlack
+      );
+      const nextUpper = clamp(session.upperHeight + (event.clientY - session.startY), upperMin, pairTotal - lowerMin);
       const nextLower = pairTotal - nextUpper;
 
       setSizes((previous) => ({
@@ -109,7 +129,7 @@ export function useResizableSectionStack<T extends string>(
       window.removeEventListener('pointerup', endResize);
       window.removeEventListener('pointercancel', endResize);
     };
-  }, [activeDivider, minHeight]);
+  }, [activeDivider, minHeight, minimumSizes]);
 
   return {
     sizes,

@@ -1,9 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 
 import type { AssetRecord } from '@lightfolio/shared';
 
-import { useResizableSectionStack } from '../hooks';
 import type { DetailSectionKey } from '../types/ui';
 import { folderFromPath, formatAperture, formatDateTime, formatIso, formatShutterSpeed } from '../utils/library';
 
@@ -13,8 +12,6 @@ interface DetailPanelProps {
   detailTags: AssetRecord['tags'];
   isCollapsed: boolean;
   collapsedSections: Record<DetailSectionKey, boolean>;
-  sectionHeights: Record<string, number>;
-  onSectionHeightsChange: (sizes: Record<string, number>) => void;
   onResizeStart: (event: React.PointerEvent<HTMLElement>) => void;
   onResizeReset: (event: React.MouseEvent<HTMLElement>) => void;
   onTogglePanel: () => void;
@@ -32,8 +29,6 @@ export function DetailPanel({
   detailTags,
   isCollapsed,
   collapsedSections,
-  sectionHeights,
-  onSectionHeightsChange,
   onResizeStart,
   onResizeReset,
   onTogglePanel,
@@ -47,17 +42,6 @@ export function DetailPanel({
   const [titleInput, setTitleInput] = useState(asset.caption?.title ?? '');
   const [bodyInput, setBodyInput] = useState(asset.caption?.body ?? '');
   const [tagInput, setTagInput] = useState('');
-  const detailSectionDefaults = useMemo<Record<DetailSectionKey, number>>(() => ({
-    description: 176,
-    tags: 154,
-    fileInfo: 150
-  }), []);
-  const detailSectionStack = useResizableSectionStack(
-    detailSectionDefaults,
-    92,
-    sectionHeights as Partial<Record<DetailSectionKey, number>>,
-    (sizes) => onSectionHeightsChange(sizes as Record<string, number>)
-  );
 
   useEffect(() => {
     setTitleInput(asset.caption?.title ?? '');
@@ -273,40 +257,16 @@ export function DetailPanel({
               <strong>{formatIso(asset.iso)}</strong>
             </div>
           </div>
-          <div className={`detail-section-stack ${detailSectionStack.isResizing ? 'detail-section-stack-resizing' : ''}`}>
-            {detailSections.map((section, index) => {
-              const nextSection = detailSections[index + 1] ?? null;
-              const dividerId = nextSection ? `${section.key}-${nextSection.key}` : null;
-              const shouldShowDivider = nextSection && !section.collapsed && !nextSection.collapsed;
-
-              return (
-                <Fragment key={section.key}>
-                  <div
-                    className={`detail-section-shell ${section.collapsed ? 'detail-section-shell-collapsed' : ''}`}
-                    style={section.collapsed
-                      ? { height: '48px' }
-                      : { minHeight: `${detailSectionStack.sizes[section.key]}px` }}
-                  >
-                    <div className={`detail-section ${section.collapsed ? 'detail-section-collapsed' : ''}`}>
-                      <button className="detail-section-toggle" onClick={() => onToggleSection(section.key)}>
-                        <span className="detail-section-title">{section.title}</span>
-                        <span>{section.collapsed ? '展开' : '收起'}</span>
-                      </button>
-                      {!section.collapsed ? section.body : null}
-                    </div>
-                  </div>
-                  {shouldShowDivider ? (
-                    <div
-                      className={`stack-resize-handle stack-resize-handle-detail ${detailSectionStack.activeDivider === dividerId ? 'stack-resize-handle-active' : ''}`}
-                      aria-hidden="true"
-                      title="拖动调整上下区块高度，双击恢复默认"
-                      onPointerDown={detailSectionStack.beginResize(section.key, nextSection.key)}
-                      onDoubleClick={detailSectionStack.resetSizes}
-                    />
-                  ) : null}
-                </Fragment>
-              );
-            })}
+          <div className="detail-section-stack">
+            {detailSections.map((section) => (
+              <div key={section.key} className={`detail-section ${section.collapsed ? 'detail-section-collapsed' : ''}`}>
+                <button className="detail-section-toggle" onClick={() => onToggleSection(section.key)}>
+                  <span className="detail-section-title">{section.title}</span>
+                  <span>{section.collapsed ? '展开' : '收起'}</span>
+                </button>
+                {!section.collapsed ? section.body : null}
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -16,8 +16,6 @@ interface SingleViewerProps {
   isDetailPanelCollapsed: boolean;
   isChromeAnimating: boolean;
   collapsedDetailSections: Record<DetailSectionKey, boolean>;
-  sectionHeights: Record<string, number>;
-  onSectionHeightsChange: (sizes: Record<string, number>) => void;
   onStartDetailResize: (event: React.PointerEvent<HTMLElement>) => void;
   onResetDetailSize: (event: React.MouseEvent<HTMLElement>) => void;
   onWheel: (event: React.WheelEvent) => void;
@@ -41,8 +39,6 @@ export function SingleViewer({
   isDetailPanelCollapsed,
   isChromeAnimating,
   collapsedDetailSections,
-  sectionHeights,
-  onSectionHeightsChange,
   onStartDetailResize,
   onResetDetailSize,
   onWheel,
@@ -86,8 +82,6 @@ export function SingleViewer({
           detailTags={detailTags}
           isCollapsed={isDetailPanelCollapsed}
           collapsedSections={collapsedDetailSections}
-          sectionHeights={sectionHeights}
-          onSectionHeightsChange={onSectionHeightsChange}
           onResizeStart={onStartDetailResize}
           onResizeReset={onResetDetailSize}
           onTogglePanel={onToggleDetailPanel}

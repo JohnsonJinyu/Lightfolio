@@ -1,7 +1,6 @@
-import { Fragment, useMemo } from 'react';
+import { useMemo } from 'react';
 import type React from 'react';
 
-import { useResizableSectionStack } from '../hooks';
 import type { WarmupProgress } from '../types/ui';
 import { folderLabel } from '../utils/library';
 
@@ -49,8 +48,6 @@ interface SidebarProps {
   warmupProgress: WarmupProgress;
   previewFailureCount: number;
   isBusy: boolean;
-  sectionHeights: Record<string, number>;
-  onSectionHeightsChange: (sizes: Record<string, number>) => void;
   onResizeStart: (event: React.PointerEvent<HTMLElement>) => void;
   onResizeReset: (event: React.MouseEvent<HTMLElement>) => void;
   onToggleSidebar: () => void;
@@ -86,8 +83,6 @@ export function Sidebar({
   warmupProgress,
   previewFailureCount,
   isBusy,
-  sectionHeights,
-  onSectionHeightsChange,
   onResizeStart,
   onResizeReset,
   onToggleSidebar,
@@ -105,17 +100,6 @@ export function Sidebar({
   const progressPercent = warmupProgress.total > 0
     ? Math.round((warmupProgress.done / warmupProgress.total) * 100)
     : 0;
-  const filterSectionDefaults = useMemo<Record<SidebarSectionKey, number>>(() => ({
-    tags: 126,
-    camera: 164,
-    lens: 156
-  }), []);
-  const filterSectionStack = useResizableSectionStack(
-    filterSectionDefaults,
-    84,
-    sectionHeights as Partial<Record<SidebarSectionKey, number>>,
-    (sizes) => onSectionHeightsChange(sizes as Record<string, number>)
-  );
   const filterSections = useMemo<SidebarFilterSection[]>(() => {
     const nextSections: SidebarFilterSection[] = [];
 
@@ -284,35 +268,18 @@ export function Sidebar({
               ))}
             </div>
             {filterSections.length > 0 ? (
-              <div className={`sidebar-section-stack ${filterSectionStack.isResizing ? 'sidebar-section-stack-resizing' : ''}`}>
+              <div className="sidebar-section-stack">
                 {filterSections.map((section, index) => {
-                  const nextSection = filterSections[index + 1] ?? null;
-                  const dividerId = nextSection ? `${section.key}-${nextSection.key}` : null;
-
                   return (
-                    <Fragment key={section.key}>
-                      <section
-                        className="sidebar-tag-section sidebar-tag-section-resizable"
-                        style={{ minHeight: `${filterSectionStack.sizes[section.key]}px` }}
-                      >
-                        <div className="sidebar-subhead">
-                          <h3>{section.title}</h3>
-                          <span>{section.subtitle}</span>
-                        </div>
-                        <div className="sidebar-section-body">
-                          {section.content}
-                        </div>
-                      </section>
-                      {nextSection ? (
-                        <div
-                          className={`stack-resize-handle ${filterSectionStack.activeDivider === dividerId ? 'stack-resize-handle-active' : ''}`}
-                          aria-hidden="true"
-                          title="拖动调整上下区块高度，双击恢复默认"
-                          onPointerDown={filterSectionStack.beginResize(section.key, nextSection.key)}
-                          onDoubleClick={filterSectionStack.resetSizes}
-                        />
-                      ) : null}
-                    </Fragment>
+                    <section key={section.key} className={`sidebar-tag-section sidebar-tag-section-resizable ${index === 0 ? 'sidebar-tag-section-first' : ''}`}>
+                      <div className="sidebar-subhead">
+                        <h3>{section.title}</h3>
+                        <span>{section.subtitle}</span>
+                      </div>
+                      <div className="sidebar-section-body">
+                        {section.content}
+                      </div>
+                    </section>
                   );
                 })}
               </div>

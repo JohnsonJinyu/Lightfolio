@@ -19,18 +19,6 @@ import { useAssetBrowser, useResizableLayout, useThumbnailWarmup, useViewerChrom
 import type { BrowserFilters, ToastState } from './types';
 import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage, rebuildImportSummary } from './utils';
 
-const DEFAULT_SIDEBAR_SECTION_HEIGHTS = {
-  tags: 126,
-  camera: 164,
-  lens: 156
-};
-
-const DEFAULT_DETAIL_SECTION_HEIGHTS = {
-  description: 176,
-  tags: 154,
-  fileInfo: 150
-};
-
 export function App() {
   const [importState, setImportState] = useState<ImportSummary | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -41,8 +29,6 @@ export function App() {
   const [failedPreviewIds, setFailedPreviewIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pendingDeleteAsset, setPendingDeleteAsset] = useState<AssetRecord | null>(null);
-  const [sidebarSectionHeights, setSidebarSectionHeights] = useState<Record<string, number>>(DEFAULT_SIDEBAR_SECTION_HEIGHTS);
-  const [detailSectionHeights, setDetailSectionHeights] = useState<Record<string, number>>(DEFAULT_DETAIL_SECTION_HEIGHTS);
   const [filters, setFilters] = useState<BrowserFilters>({
     searchQuery: '',
     mediaFilter: 'all',
@@ -179,14 +165,6 @@ export function App() {
           detailPanelWidth: snapshot.uiState?.detailPanelWidth,
           filmstripHeight: snapshot.uiState?.filmstripHeight
         });
-        setSidebarSectionHeights({
-          ...DEFAULT_SIDEBAR_SECTION_HEIGHTS,
-          ...snapshot.uiState?.sidebarSectionHeights
-        });
-        setDetailSectionHeights({
-          ...DEFAULT_DETAIL_SECTION_HEIGHTS,
-          ...snapshot.uiState?.detailSectionHeights
-        });
         chrome.setIsSidebarCollapsed(snapshot.uiState?.isSidebarCollapsed ?? false);
         chrome.setIsFolderListCollapsed(snapshot.uiState?.isFolderListCollapsed ?? false);
         chrome.setIsDetailPanelCollapsed(snapshot.uiState?.isDetailPanelCollapsed ?? false);
@@ -245,8 +223,6 @@ export function App() {
         sidebarWidth: layout.layoutSizes.sidebarWidth,
         detailPanelWidth: layout.layoutSizes.detailPanelWidth,
         filmstripHeight: layout.layoutSizes.filmstripHeight,
-        sidebarSectionHeights,
-        detailSectionHeights,
         isSidebarCollapsed: chrome.isSidebarCollapsed,
         isFolderListCollapsed: chrome.isFolderListCollapsed,
         isDetailPanelCollapsed: chrome.isDetailPanelCollapsed,
@@ -256,7 +232,7 @@ export function App() {
     };
 
     void window.lightfolio.saveLibrary(snapshot);
-  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, detailSectionHeights, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, hiddenAssetIds, importState, isLibraryReady, layout.layoutSizes.detailPanelWidth, layout.layoutSizes.filmstripHeight, layout.layoutSizes.sidebarWidth, removedFromAlbumIds, sidebarSectionHeights]);
+  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, hiddenAssetIds, importState, isLibraryReady, layout.layoutSizes.detailPanelWidth, layout.layoutSizes.filmstripHeight, layout.layoutSizes.sidebarWidth, removedFromAlbumIds]);
 
   useEffect(() => {
     if (!toast) {
@@ -717,8 +693,6 @@ export function App() {
         onSelectTag={(label) => setFilters((previous) => ({ ...previous, activeTag: label }))}
         onSelectCamera={(label) => setFilters((previous) => ({ ...previous, activeCamera: label }))}
         onSelectLens={(label) => setFilters((previous) => ({ ...previous, activeLens: label }))}
-        sectionHeights={sidebarSectionHeights}
-        onSectionHeightsChange={setSidebarSectionHeights}
         onRetryFailedPreviews={retryFailedPreviews}
         onImport={runImport}
       />
@@ -744,8 +718,6 @@ export function App() {
                 isDetailPanelCollapsed={chrome.isDetailPanelCollapsed}
                 isChromeAnimating={chrome.isChromeAnimating}
                 collapsedDetailSections={chrome.collapsedDetailSections}
-                sectionHeights={detailSectionHeights}
-                onSectionHeightsChange={setDetailSectionHeights}
                 onStartDetailResize={layout.beginResize('detail')}
                 onResetDetailSize={layout.resetSize('detail')}
                 onWheel={browser.onSingleWheel}

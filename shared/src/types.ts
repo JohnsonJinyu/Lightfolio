@@ -83,8 +83,6 @@ export interface LibraryViewState {
   sidebarWidth?: number;
   detailPanelWidth?: number;
   filmstripHeight?: number;
-  sidebarSectionHeights?: Record<string, number>;
-  detailSectionHeights?: Record<string, number>;
   isSidebarCollapsed: boolean;
   isFolderListCollapsed: boolean;
   isDetailPanelCollapsed: boolean;
