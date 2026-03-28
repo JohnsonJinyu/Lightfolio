@@ -31,6 +31,7 @@ const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bm
 const thumbnailMemoryCache = new Map<string, Buffer>();
 const thumbnailCacheDir = path.join(app.getPath('userData'), 'thumb-cache');
 const maxThumbnailMemoryItems = 256;
+const THUMBNAIL_CACHE_VERSION = '2';
 
 function imageSizeForPath(filePath: string) {
   try {
@@ -86,7 +87,7 @@ async function loadThumbnailBuffer(filePath: string, width: number, height: numb
     return null;
   }
 
-  const keySource = `${filePath}|${stats.size}|${Math.trunc(stats.mtimeMs)}|${width}|${height}`;
+  const keySource = `${THUMBNAIL_CACHE_VERSION}|${filePath}|${stats.size}|${Math.trunc(stats.mtimeMs)}|${width}|${height}`;
   const key = crypto.createHash('sha1').update(keySource).digest('hex');
   const inMemory = thumbnailMemoryCache.get(key);
 
@@ -135,6 +136,10 @@ function enrichImportSummaryWithDimensions<T extends { assets: Array<{ kind: str
       continue;
     }
 
+    if (asset.pixelWidth && asset.pixelHeight) {
+      continue;
+    }
+
     const size = imageSizeForPath(asset.filePath);
 
     if (!size) {
@@ -180,25 +185,28 @@ async function hydrateLibrarySnapshot(snapshot: LibrarySnapshot) {
       return asset;
     }
 
-    const size = (!asset.pixelWidth || !asset.pixelHeight)
+    const exif = await readExifSnapshot(asset.filePath);
+
+    const size = (!exif.pixelWidth || !exif.pixelHeight)
       ? imageSizeForPath(asset.filePath)
       : null;
 
-    const nextPixelWidth = asset.pixelWidth ?? size?.width;
-    const nextPixelHeight = asset.pixelHeight ?? size?.height;
+    const nextPixelWidth = exif.pixelWidth ?? asset.pixelWidth ?? size?.width;
+    const nextPixelHeight = exif.pixelHeight ?? asset.pixelHeight ?? size?.height;
 
     const needsMetadata = !asset.cameraModel
       || !asset.lensModel
       || !asset.aperture
       || !asset.shutterSpeed
       || !asset.iso
+      || nextPixelWidth !== asset.pixelWidth
+      || nextPixelHeight !== asset.pixelHeight
       || await isLikelyFallbackCapturedAt(asset);
 
     if (!needsMetadata) {
       return asset;
     }
 
-    const exif = await readExifSnapshot(asset.filePath);
     const nextCapturedAt = exif.capturedAt ?? asset.capturedAt;
     const nextCameraModel = exif.cameraModel ?? asset.cameraModel;
     const nextLensModel = exif.lensModel ?? asset.lensModel;
@@ -392,7 +400,7 @@ app.whenReady().then(() => {
             status: 200,
             headers: {
               'content-type': 'image/png',
-              'cache-control': 'public, max-age=86400'
+              'cache-control': 'no-store'
             }
           });
         });

@@ -4,7 +4,7 @@ import type { AssetRecord } from '@lightfolio/shared';
 
 import { WATERFALL_GAP, WATERFALL_MIN_TILE_WIDTH } from '../constants/layout';
 import type { BrowserFilters, NavDirection, ViewMode, WaterfallLayoutMetrics, WaterfallVisibleItem } from '../types/ui';
-import { folderFromPath, waterfallBucketAspectRatio } from '../utils/library';
+import { assetAspectRatio, folderFromPath } from '../utils/library';
 import { preloadImage } from '../utils/media';
 
 interface UseAssetBrowserOptions {
@@ -100,9 +100,10 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
     const columnWidth = Math.max(160, Math.floor((width - WATERFALL_GAP * (columns - 1)) / columns));
     const columnHeights = Array.from({ length: columns }, () => 0);
     const items = filteredAssets.map((asset, index) => {
-      const aspectRatio = asset.kind === 'video' && (!asset.pixelWidth || !asset.pixelHeight)
+      const rawAspectRatio = asset.kind === 'video' && (!asset.pixelWidth || !asset.pixelHeight)
         ? 3 / 2
-        : waterfallBucketAspectRatio(asset);
+        : assetAspectRatio(asset);
+      const aspectRatio = Math.max(0.55, Math.min(3.2, rawAspectRatio || 1));
       const height = Math.max(120, Math.round(columnWidth / aspectRatio));
 
       let targetColumn = 0;

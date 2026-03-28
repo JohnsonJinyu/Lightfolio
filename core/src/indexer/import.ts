@@ -112,6 +112,8 @@ export async function createImportSummary(paths: string[], source: ImportSourceK
         source,
         filePath,
         fileName,
+        pixelWidth: exif.pixelWidth,
+        pixelHeight: exif.pixelHeight,
         capturedAt,
         importedAt,
         cameraModel: exif.cameraModel,

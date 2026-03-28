@@ -7,6 +7,8 @@ export interface ExifSnapshot {
   aperture?: number;
   shutterSpeed?: number;
   iso?: number;
+  pixelWidth?: number;
+  pixelHeight?: number;
 }
 
 interface RawExifFields {
@@ -25,6 +27,11 @@ interface RawExifFields {
   PhotographicSensitivity?: number | string;
   ISOSpeed?: number | string;
   RecommendedExposureIndex?: number | string;
+  Orientation?: number | string;
+  ExifImageWidth?: number | string;
+  ExifImageHeight?: number | string;
+  ImageWidth?: number | string;
+  ImageHeight?: number | string;
 }
 
 const exifExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.bmp']);
@@ -133,6 +140,47 @@ function normalizeIso(value: number | string | undefined): number | undefined {
   return numeric;
 }
 
+function normalizePixelDimension(value: number | string | undefined): number | undefined {
+  const numeric = normalizeNumeric(value);
+
+  if (!numeric || !Number.isFinite(numeric) || numeric <= 0) {
+    return undefined;
+  }
+
+  return Math.round(numeric);
+}
+
+function normalizeOrientation(value: number | string | undefined): number | undefined {
+  const numeric = normalizeNumeric(value);
+
+  if (!numeric || !Number.isFinite(numeric)) {
+    return undefined;
+  }
+
+  const orientation = Math.round(numeric);
+  return orientation >= 1 && orientation <= 8 ? orientation : undefined;
+}
+
+function normalizeDisplayDimensions(
+  widthValue: number | string | undefined,
+  heightValue: number | string | undefined,
+  orientationValue: number | string | undefined
+) {
+  const width = normalizePixelDimension(widthValue);
+  const height = normalizePixelDimension(heightValue);
+
+  if (!width || !height) {
+    return {};
+  }
+
+  const orientation = normalizeOrientation(orientationValue);
+  const shouldSwap = orientation === 5 || orientation === 6 || orientation === 7 || orientation === 8;
+
+  return shouldSwap
+    ? { pixelWidth: height, pixelHeight: width }
+    : { pixelWidth: width, pixelHeight: height };
+}
+
 function normalizeCameraModel(make: string | undefined, model: string | undefined) {
   const normalizedMake = normalizeText(make);
   const normalizedModel = normalizeText(model);
@@ -202,7 +250,12 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
         'ISO',
         'PhotographicSensitivity',
         'ISOSpeed',
-        'RecommendedExposureIndex'
+        'RecommendedExposureIndex',
+        'Orientation',
+        'ExifImageWidth',
+        'ExifImageHeight',
+        'ImageWidth',
+        'ImageHeight'
       ]
     });
 
@@ -210,13 +263,20 @@ export async function readExifSnapshot(filePath: string): Promise<ExifSnapshot> 
       return {};
     }
 
+    const dimensions = normalizeDisplayDimensions(
+      raw.ExifImageWidth ?? raw.ImageWidth,
+      raw.ExifImageHeight ?? raw.ImageHeight,
+      raw.Orientation
+    );
+
     return {
       capturedAt: normalizeDate(raw.DateTimeOriginal ?? raw.CreateDate),
       cameraModel: normalizeCameraModel(raw.Make, raw.Model),
       lensModel: normalizeText(raw.LensModel ?? raw.LensInfo),
       aperture: normalizeAperture(raw.FNumber ?? raw.ApertureValue ?? raw.MaxApertureValue),
       shutterSpeed: normalizeShutterSpeed(raw.ExposureTime ?? raw.ShutterSpeedValue),
-      iso: normalizeIso(raw.ISO ?? raw.PhotographicSensitivity ?? raw.ISOSpeed ?? raw.RecommendedExposureIndex)
+      iso: normalizeIso(raw.ISO ?? raw.PhotographicSensitivity ?? raw.ISOSpeed ?? raw.RecommendedExposureIndex),
+      ...dimensions
     };
   } catch {
     return {};
