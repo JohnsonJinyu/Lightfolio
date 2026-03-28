@@ -4,8 +4,8 @@
   line-height: 1.45;
   font-weight: 400;
   --sidebar-width: clamp(236px, 19vw, 268px);
-  --sidebar-collapsed-width: 60px;
-  --detail-panel-width: clamp(296px, 23vw, 360px);
+  --sidebar-collapsed-width: var(--detail-panel-collapsed-width);
+  --detail-panel-width: clamp(268px, 20vw, 320px);
   --detail-panel-collapsed-width: 48px;
   --edge-toggle-width: 24px;
   --edge-toggle-height: 56px;

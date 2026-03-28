@@ -43,32 +43,36 @@ export function SingleViewer({
       className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''} ${isChromeAnimating ? 'viewer-single-chrome-animating' : ''}`}
       onWheel={onWheel}
     >
-      <div className={`viewer-stage ${isChromeAnimating ? 'viewer-stage-chrome-animating' : ''}`} onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
-        <div className={`viewer-media viewer-media-${asset.kind} media-${navDirection}`}>
-          {!failedPreviewIds.has(asset.id) ? (
-            asset.kind === 'image' ? (
-              <ProgressiveSingleImage asset={asset} onError={() => onPreviewError(asset.id)} />
-            ) : (
-              <div className="video-placeholder detail-media" />
-            )
-          ) : null}
+      <div
+        className={`viewer-stage ${isDetailPanelCollapsed ? 'viewer-stage-detail-collapsed' : 'viewer-stage-detail-open'} ${isChromeAnimating ? 'viewer-stage-chrome-animating' : ''}`}
+      >
+        <div className="viewer-stage-main" onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
+          <div className={`viewer-media viewer-media-${asset.kind} media-${navDirection}`}>
+            {!failedPreviewIds.has(asset.id) ? (
+              asset.kind === 'image' ? (
+                <ProgressiveSingleImage asset={asset} onError={() => onPreviewError(asset.id)} />
+              ) : (
+                <div className="video-placeholder detail-media" />
+              )
+            ) : null}
+          </div>
+          <div className="viewer-overlay-meta">
+            <span>{formatDate(asset.capturedAt)}</span>
+            <strong>{asset.caption?.title ?? asset.fileName}</strong>
+            <em>{asset.kind === 'video' ? '视频' : '照片'} · {selectedFolderLabel}</em>
+          </div>
         </div>
-        <div className="viewer-overlay-meta">
-          <span>{formatDate(asset.capturedAt)}</span>
-          <strong>{asset.caption?.title ?? asset.fileName}</strong>
-          <em>{asset.kind === 'video' ? '视频' : '照片'} · {selectedFolderLabel}</em>
-        </div>
+        <DetailPanel
+          asset={asset}
+          selectedFolderLabel={selectedFolderLabel}
+          detailTags={detailTags}
+          isCollapsed={isDetailPanelCollapsed}
+          collapsedSections={collapsedDetailSections}
+          onTogglePanel={onToggleDetailPanel}
+          onToggleSection={onToggleDetailSection}
+          onWheel={onWheel}
+        />
       </div>
-      <DetailPanel
-        asset={asset}
-        selectedFolderLabel={selectedFolderLabel}
-        detailTags={detailTags}
-        isCollapsed={isDetailPanelCollapsed}
-        collapsedSections={collapsedDetailSections}
-        onTogglePanel={onToggleDetailPanel}
-        onToggleSection={onToggleDetailSection}
-        onWheel={onWheel}
-      />
     </article>
   );
 }

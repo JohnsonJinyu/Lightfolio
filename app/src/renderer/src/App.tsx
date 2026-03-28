@@ -407,7 +407,6 @@ export function App() {
           browser.setNavDirection('none');
           browser.setActiveFolder('all');
         }}
-        onCycleFolder={browser.cycleFolder}
         onToggleFolderList={() => chrome.setIsFolderListCollapsed((previous) => !previous)}
         onSelectFolder={(path) => {
           browser.setNavDirection('none');

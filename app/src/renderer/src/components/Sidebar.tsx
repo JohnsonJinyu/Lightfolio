@@ -18,7 +18,6 @@ interface SidebarProps {
   isBusy: boolean;
   onToggleSidebar: () => void;
   onSelectAllFolders: () => void;
-  onCycleFolder: (offset: number) => void;
   onToggleFolderList: () => void;
   onSelectFolder: (path: string) => void;
   onRetryFailedPreviews: () => void;
@@ -37,7 +36,6 @@ export function Sidebar({
   isBusy,
   onToggleSidebar,
   onSelectAllFolders,
-  onCycleFolder,
   onToggleFolderList,
   onSelectFolder,
   onRetryFailedPreviews,
@@ -49,29 +47,15 @@ export function Sidebar({
 
   return (
     <aside className={`sidebar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <div className="sidebar-rail">
-        <button
-          className="rail-button"
-          title={isSidebarCollapsed ? '展开目录' : '收起目录'}
-          onClick={onToggleSidebar}
-        >
-          <span className="rail-icon">{isSidebarCollapsed ? '»' : '«'}</span>
-        </button>
-        <button
-          className={`rail-button ${activeFolder === 'all' ? 'rail-button-active' : ''}`}
-          title="全部照片"
-          onClick={onSelectAllFolders}
-        >
-          <span className="rail-icon">▦</span>
-        </button>
-        <button className="rail-button" title="上一个目录" onClick={() => onCycleFolder(-1)}>
-          <span className="rail-icon">↑</span>
-        </button>
-        <button className="rail-button" title="下一个目录" onClick={() => onCycleFolder(1)}>
-          <span className="rail-icon">↓</span>
-        </button>
-      </div>
-
+      <button
+        className={`sidebar-toggle ${isSidebarCollapsed ? 'sidebar-toggle-collapsed' : ''}`}
+        type="button"
+        title={isSidebarCollapsed ? '展开目录' : '收起目录'}
+        aria-label={isSidebarCollapsed ? '展开目录' : '收起目录'}
+        onClick={onToggleSidebar}
+      >
+        <span aria-hidden="true">{isSidebarCollapsed ? '›' : '‹'}</span>
+      </button>
       <div className="sidebar-panel">
         <div className="sidebar-head">
           <div>
