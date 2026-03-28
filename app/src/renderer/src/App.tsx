@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type React from 'react';
 
 import type { AssetRecord, ImportSummary, LibrarySnapshot } from '@lightfolio/shared';
 
@@ -14,9 +15,21 @@ import {
   TopBar,
   WaterfallGrid
 } from './components';
-import { useAssetBrowser, useThumbnailWarmup, useViewerChrome } from './hooks';
+import { useAssetBrowser, useResizableLayout, useThumbnailWarmup, useViewerChrome } from './hooks';
 import type { BrowserFilters, ToastState } from './types';
 import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage, rebuildImportSummary } from './utils';
+
+const DEFAULT_SIDEBAR_SECTION_HEIGHTS = {
+  tags: 126,
+  camera: 164,
+  lens: 156
+};
+
+const DEFAULT_DETAIL_SECTION_HEIGHTS = {
+  description: 176,
+  tags: 154,
+  fileInfo: 150
+};
 
 export function App() {
   const [importState, setImportState] = useState<ImportSummary | null>(null);
@@ -28,6 +41,8 @@ export function App() {
   const [failedPreviewIds, setFailedPreviewIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pendingDeleteAsset, setPendingDeleteAsset] = useState<AssetRecord | null>(null);
+  const [sidebarSectionHeights, setSidebarSectionHeights] = useState<Record<string, number>>(DEFAULT_SIDEBAR_SECTION_HEIGHTS);
+  const [detailSectionHeights, setDetailSectionHeights] = useState<Record<string, number>>(DEFAULT_DETAIL_SECTION_HEIGHTS);
   const [filters, setFilters] = useState<BrowserFilters>({
     searchQuery: '',
     mediaFilter: 'all',
@@ -38,6 +53,7 @@ export function App() {
     featuredOnly: false
   });
   const { warmupProgress, setWarmupProgress, warmupThumbnails } = useThumbnailWarmup();
+  const layout = useResizableLayout();
 
   const sourceTimeline = importState?.timeline ?? (isLibraryReady ? [] : bootTimeline);
   const timeline = useMemo(() => filterTimeline(sourceTimeline, hiddenAssetIds), [hiddenAssetIds, sourceTimeline]);
@@ -158,6 +174,19 @@ export function App() {
           favoriteOnly: snapshot.uiState?.favoriteOnly ?? false,
           featuredOnly: snapshot.uiState?.featuredOnly ?? false
         });
+        layout.setLayoutSizes({
+          sidebarWidth: snapshot.uiState?.sidebarWidth,
+          detailPanelWidth: snapshot.uiState?.detailPanelWidth,
+          filmstripHeight: snapshot.uiState?.filmstripHeight
+        });
+        setSidebarSectionHeights({
+          ...DEFAULT_SIDEBAR_SECTION_HEIGHTS,
+          ...snapshot.uiState?.sidebarSectionHeights
+        });
+        setDetailSectionHeights({
+          ...DEFAULT_DETAIL_SECTION_HEIGHTS,
+          ...snapshot.uiState?.detailSectionHeights
+        });
         chrome.setIsSidebarCollapsed(snapshot.uiState?.isSidebarCollapsed ?? false);
         chrome.setIsFolderListCollapsed(snapshot.uiState?.isFolderListCollapsed ?? false);
         chrome.setIsDetailPanelCollapsed(snapshot.uiState?.isDetailPanelCollapsed ?? false);
@@ -188,6 +217,7 @@ export function App() {
     chrome.setIsFilmstripCollapsed,
     chrome.setIsFolderListCollapsed,
     chrome.setIsSidebarCollapsed,
+    layout.setLayoutSizes,
     warmupThumbnails
   ]);
 
@@ -212,6 +242,11 @@ export function App() {
         activeLens: filters.activeLens,
         favoriteOnly: filters.favoriteOnly,
         featuredOnly: filters.featuredOnly,
+        sidebarWidth: layout.layoutSizes.sidebarWidth,
+        detailPanelWidth: layout.layoutSizes.detailPanelWidth,
+        filmstripHeight: layout.layoutSizes.filmstripHeight,
+        sidebarSectionHeights,
+        detailSectionHeights,
         isSidebarCollapsed: chrome.isSidebarCollapsed,
         isFolderListCollapsed: chrome.isFolderListCollapsed,
         isDetailPanelCollapsed: chrome.isDetailPanelCollapsed,
@@ -221,7 +256,7 @@ export function App() {
     };
 
     void window.lightfolio.saveLibrary(snapshot);
-  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, hiddenAssetIds, importState, isLibraryReady, removedFromAlbumIds]);
+  }, [browser.activeFolder, browser.selectedAssetId, browser.viewMode, chrome.isDetailPanelCollapsed, chrome.isFilmstripCollapsed, chrome.isFolderListCollapsed, chrome.isSidebarCollapsed, detailSectionHeights, filters.activeCamera, filters.activeLens, filters.activeTag, filters.favoriteOnly, filters.featuredOnly, filters.mediaFilter, filters.searchQuery, hiddenAssetIds, importState, isLibraryReady, layout.layoutSizes.detailPanelWidth, layout.layoutSizes.filmstripHeight, layout.layoutSizes.sidebarWidth, removedFromAlbumIds, sidebarSectionHeights]);
 
   useEffect(() => {
     if (!toast) {
@@ -607,9 +642,17 @@ export function App() {
 
   const contextMenuAssetId = chrome.contextMenu?.assetId ?? null;
   const contextAsset = contextMenuAssetId ? filteredAssets.find((asset) => asset.id === contextMenuAssetId) ?? null : null;
+  const shellStyle = useMemo(() => ({
+    '--sidebar-width': `${layout.layoutSizes.sidebarWidth}px`,
+    '--detail-panel-width': `${layout.layoutSizes.detailPanelWidth}px`,
+    '--filmstrip-height': `${layout.layoutSizes.filmstripHeight}px`
+  }) as React.CSSProperties, [layout.layoutSizes.detailPanelWidth, layout.layoutSizes.filmstripHeight, layout.layoutSizes.sidebarWidth]);
 
   return (
-    <div className={`shell ${chrome.isSidebarCollapsed ? 'shell-sidebar-collapsed' : ''}`}>
+    <div
+      className={`shell ${chrome.isSidebarCollapsed ? 'shell-sidebar-collapsed' : ''} ${layout.isResizing ? `shell-resizing shell-resizing-${layout.activeHandle}` : ''}`}
+      style={shellStyle}
+    >
       <TopBar
         activeSource={activeSource}
         totalAssets={totalAssets}
@@ -657,6 +700,8 @@ export function App() {
         warmupProgress={warmupProgress}
         previewFailureCount={previewFailureCount}
         isBusy={isBusy}
+        onResizeStart={layout.beginResize('sidebar')}
+        onResizeReset={layout.resetSize('sidebar')}
         onToggleSidebar={() => chrome.setIsSidebarCollapsed((previous) => !previous)}
         onSelectAllFolders={() => {
           browser.setNavDirection('none');
@@ -672,6 +717,8 @@ export function App() {
         onSelectTag={(label) => setFilters((previous) => ({ ...previous, activeTag: label }))}
         onSelectCamera={(label) => setFilters((previous) => ({ ...previous, activeCamera: label }))}
         onSelectLens={(label) => setFilters((previous) => ({ ...previous, activeLens: label }))}
+        sectionHeights={sidebarSectionHeights}
+        onSectionHeightsChange={setSidebarSectionHeights}
         onRetryFailedPreviews={retryFailedPreviews}
         onImport={runImport}
       />
@@ -697,6 +744,10 @@ export function App() {
                 isDetailPanelCollapsed={chrome.isDetailPanelCollapsed}
                 isChromeAnimating={chrome.isChromeAnimating}
                 collapsedDetailSections={chrome.collapsedDetailSections}
+                sectionHeights={detailSectionHeights}
+                onSectionHeightsChange={setDetailSectionHeights}
+                onStartDetailResize={layout.beginResize('detail')}
+                onResetDetailSize={layout.resetSize('detail')}
                 onWheel={browser.onSingleWheel}
                 onOpenAssetMenu={chrome.openAssetMenu}
                 onToggleDetailPanel={chrome.toggleDetailPanel}
@@ -737,6 +788,8 @@ export function App() {
           selectedId={browser.selected?.id ?? null}
           failedPreviewIds={failedPreviewIds}
           trackRef={browser.filmstripTrackRef}
+          onResizeStart={layout.beginResize('filmstrip')}
+          onResizeReset={layout.resetSize('filmstrip')}
           onWheel={browser.onFilmstripWheel}
           onToggle={chrome.toggleFilmstrip}
           onSelectById={browser.selectById}

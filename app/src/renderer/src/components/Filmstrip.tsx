@@ -12,6 +12,8 @@ interface FilmstripProps {
   selectedId: string | null;
   failedPreviewIds: Set<string>;
   trackRef: React.RefObject<HTMLDivElement | null>;
+  onResizeStart: (event: React.PointerEvent<HTMLElement>) => void;
+  onResizeReset: (event: React.MouseEvent<HTMLElement>) => void;
   onWheel: (event: React.WheelEvent) => void;
   onToggle: () => void;
   onSelectById: (assetId: string) => void;
@@ -25,6 +27,8 @@ export function Filmstrip({
   selectedId,
   failedPreviewIds,
   trackRef,
+  onResizeStart,
+  onResizeReset,
   onWheel,
   onToggle,
   onSelectById,
@@ -33,6 +37,15 @@ export function Filmstrip({
 }: FilmstripProps) {
   return (
     <section className={`filmstrip ${isCollapsed ? 'filmstrip-collapsed' : ''}`}>
+      {!isCollapsed ? (
+        <div
+          className="resize-handle resize-handle-horizontal resize-handle-filmstrip"
+          aria-hidden="true"
+          title="拖动调整胶卷栏高度，双击恢复默认"
+          onPointerDown={onResizeStart}
+          onDoubleClick={onResizeReset}
+        />
+      ) : null}
       <button
         className={`edge-toggle filmstrip-toggle ${isCollapsed ? 'filmstrip-toggle-collapsed' : ''}`}
         type="button"

@@ -80,6 +80,11 @@ export interface LibraryViewState {
   activeLens?: string | null;
   favoriteOnly?: boolean;
   featuredOnly?: boolean;
+  sidebarWidth?: number;
+  detailPanelWidth?: number;
+  filmstripHeight?: number;
+  sidebarSectionHeights?: Record<string, number>;
+  detailSectionHeights?: Record<string, number>;
   isSidebarCollapsed: boolean;
   isFolderListCollapsed: boolean;
   isDetailPanelCollapsed: boolean;

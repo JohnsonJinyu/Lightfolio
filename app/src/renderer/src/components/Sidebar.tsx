@@ -1,5 +1,11 @@
+import { Fragment, useMemo } from 'react';
+import type React from 'react';
+
+import { useResizableSectionStack } from '../hooks';
 import type { WarmupProgress } from '../types/ui';
 import { folderLabel } from '../utils/library';
+
+type SidebarSectionKey = 'tags' | 'camera' | 'lens';
 
 interface FolderItem {
   path: string;
@@ -14,6 +20,13 @@ interface TagItem {
 interface NamedFilterItem {
   label: string;
   count: number;
+}
+
+interface SidebarFilterSection {
+  key: SidebarSectionKey;
+  title: string;
+  subtitle: string;
+  content: React.ReactNode;
 }
 
 interface SidebarProps {
@@ -36,6 +49,10 @@ interface SidebarProps {
   warmupProgress: WarmupProgress;
   previewFailureCount: number;
   isBusy: boolean;
+  sectionHeights: Record<string, number>;
+  onSectionHeightsChange: (sizes: Record<string, number>) => void;
+  onResizeStart: (event: React.PointerEvent<HTMLElement>) => void;
+  onResizeReset: (event: React.MouseEvent<HTMLElement>) => void;
   onToggleSidebar: () => void;
   onSelectAllFolders: () => void;
   onToggleFolderList: () => void;
@@ -69,6 +86,10 @@ export function Sidebar({
   warmupProgress,
   previewFailureCount,
   isBusy,
+  sectionHeights,
+  onSectionHeightsChange,
+  onResizeStart,
+  onResizeReset,
   onToggleSidebar,
   onSelectAllFolders,
   onToggleFolderList,
@@ -84,9 +105,100 @@ export function Sidebar({
   const progressPercent = warmupProgress.total > 0
     ? Math.round((warmupProgress.done / warmupProgress.total) * 100)
     : 0;
+  const filterSectionDefaults = useMemo<Record<SidebarSectionKey, number>>(() => ({
+    tags: 126,
+    camera: 164,
+    lens: 156
+  }), []);
+  const filterSectionStack = useResizableSectionStack(
+    filterSectionDefaults,
+    84,
+    sectionHeights as Partial<Record<SidebarSectionKey, number>>,
+    (sizes) => onSectionHeightsChange(sizes as Record<string, number>)
+  );
+  const filterSections = useMemo<SidebarFilterSection[]>(() => {
+    const nextSections: SidebarFilterSection[] = [];
+
+    if (tagItems.length > 0) {
+      nextSections.push({
+        key: 'tags',
+        title: '常用标签',
+        subtitle: `${tagItems.length} 个`,
+        content: (
+          <div className="sidebar-tag-list">
+            <button className={`sidebar-tag-filter ${activeTag === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectTag(null)}>
+              <span>全部标签</span>
+            </button>
+            {tagItems.map((tag) => (
+              <button
+                key={tag.label}
+                className={`sidebar-tag-filter ${activeTag === tag.label ? 'sidebar-tag-filter-active' : ''}`}
+                onClick={() => onSelectTag(activeTag === tag.label ? null : tag.label)}
+              >
+                <span>{tag.label}</span>
+                <em>{tag.count}</em>
+              </button>
+            ))}
+          </div>
+        )
+      });
+    }
+
+    if (cameraItems.length > 0) {
+      nextSections.push({
+        key: 'camera',
+        title: '拍摄设备',
+        subtitle: `${cameraItems.length} 台`,
+        content: (
+          <div className="sidebar-tag-list">
+            <button className={`sidebar-tag-filter ${activeCamera === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectCamera(null)}>
+              <span>全部设备</span>
+            </button>
+            {cameraItems.map((camera) => (
+              <button
+                key={camera.label}
+                className={`sidebar-tag-filter ${activeCamera === camera.label ? 'sidebar-tag-filter-active' : ''}`}
+                onClick={() => onSelectCamera(activeCamera === camera.label ? null : camera.label)}
+              >
+                <span>{camera.label}</span>
+                <em>{camera.count}</em>
+              </button>
+            ))}
+          </div>
+        )
+      });
+    }
+
+    if (lensItems.length > 0) {
+      nextSections.push({
+        key: 'lens',
+        title: '镜头',
+        subtitle: `${lensItems.length} 支`,
+        content: (
+          <div className="sidebar-tag-list">
+            <button className={`sidebar-tag-filter ${activeLens === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectLens(null)}>
+              <span>全部镜头</span>
+            </button>
+            {lensItems.map((lens) => (
+              <button
+                key={lens.label}
+                className={`sidebar-tag-filter ${activeLens === lens.label ? 'sidebar-tag-filter-active' : ''}`}
+                onClick={() => onSelectLens(activeLens === lens.label ? null : lens.label)}
+              >
+                <span>{lens.label}</span>
+                <em>{lens.count}</em>
+              </button>
+            ))}
+          </div>
+        )
+      });
+    }
+
+    return nextSections;
+  }, [activeCamera, activeLens, activeTag, cameraItems, lensItems, onSelectCamera, onSelectLens, onSelectTag, tagItems]);
 
   return (
-    <aside className={`sidebar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className="sidebar-shell">
       <button
         className={`edge-toggle sidebar-toggle ${isSidebarCollapsed ? 'sidebar-toggle-collapsed' : ''}`}
         type="button"
@@ -96,7 +208,26 @@ export function Sidebar({
       >
         <span className="edge-toggle-icon" aria-hidden="true">{isSidebarCollapsed ? '›' : '‹'}</span>
       </button>
-      <div className="sidebar-panel">
+      <aside className={`sidebar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {!isSidebarCollapsed ? (
+          <>
+            <div
+              className="resize-handle resize-handle-vertical resize-handle-sidebar resize-handle-sidebar-top"
+              aria-hidden="true"
+              title="拖动调整目录栏宽度，双击恢复默认"
+              onPointerDown={onResizeStart}
+              onDoubleClick={onResizeReset}
+            />
+            <div
+              className="resize-handle resize-handle-vertical resize-handle-sidebar resize-handle-sidebar-bottom"
+              aria-hidden="true"
+              title="拖动调整目录栏宽度，双击恢复默认"
+              onPointerDown={onResizeStart}
+              onDoubleClick={onResizeReset}
+            />
+          </>
+        ) : null}
+        <div className="sidebar-panel">
         <div className="sidebar-head">
           <div>
             <h2>照片目录</h2>
@@ -152,74 +283,39 @@ export function Sidebar({
                 </button>
               ))}
             </div>
-            {tagItems.length > 0 ? (
-              <section className="sidebar-tag-section">
-                <div className="sidebar-subhead">
-                  <h3>常用标签</h3>
-                  <span>{tagItems.length} 个</span>
-                </div>
-                <div className="sidebar-tag-list">
-                  <button className={`sidebar-tag-filter ${activeTag === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectTag(null)}>
-                    <span>全部标签</span>
-                  </button>
-                  {tagItems.map((tag) => (
-                    <button
-                      key={tag.label}
-                      className={`sidebar-tag-filter ${activeTag === tag.label ? 'sidebar-tag-filter-active' : ''}`}
-                      onClick={() => onSelectTag(activeTag === tag.label ? null : tag.label)}
-                    >
-                      <span>{tag.label}</span>
-                      <em>{tag.count}</em>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            {cameraItems.length > 0 ? (
-              <section className="sidebar-tag-section">
-                <div className="sidebar-subhead">
-                  <h3>拍摄设备</h3>
-                  <span>{cameraItems.length} 台</span>
-                </div>
-                <div className="sidebar-tag-list">
-                  <button className={`sidebar-tag-filter ${activeCamera === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectCamera(null)}>
-                    <span>全部设备</span>
-                  </button>
-                  {cameraItems.map((camera) => (
-                    <button
-                      key={camera.label}
-                      className={`sidebar-tag-filter ${activeCamera === camera.label ? 'sidebar-tag-filter-active' : ''}`}
-                      onClick={() => onSelectCamera(activeCamera === camera.label ? null : camera.label)}
-                    >
-                      <span>{camera.label}</span>
-                      <em>{camera.count}</em>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            {lensItems.length > 0 ? (
-              <section className="sidebar-tag-section">
-                <div className="sidebar-subhead">
-                  <h3>镜头</h3>
-                  <span>{lensItems.length} 支</span>
-                </div>
-                <div className="sidebar-tag-list">
-                  <button className={`sidebar-tag-filter ${activeLens === null ? 'sidebar-tag-filter-active' : ''}`} onClick={() => onSelectLens(null)}>
-                    <span>全部镜头</span>
-                  </button>
-                  {lensItems.map((lens) => (
-                    <button
-                      key={lens.label}
-                      className={`sidebar-tag-filter ${activeLens === lens.label ? 'sidebar-tag-filter-active' : ''}`}
-                      onClick={() => onSelectLens(activeLens === lens.label ? null : lens.label)}
-                    >
-                      <span>{lens.label}</span>
-                      <em>{lens.count}</em>
-                    </button>
-                  ))}
-                </div>
-              </section>
+            {filterSections.length > 0 ? (
+              <div className={`sidebar-section-stack ${filterSectionStack.isResizing ? 'sidebar-section-stack-resizing' : ''}`}>
+                {filterSections.map((section, index) => {
+                  const nextSection = filterSections[index + 1] ?? null;
+                  const dividerId = nextSection ? `${section.key}-${nextSection.key}` : null;
+
+                  return (
+                    <Fragment key={section.key}>
+                      <section
+                        className="sidebar-tag-section sidebar-tag-section-resizable"
+                        style={{ minHeight: `${filterSectionStack.sizes[section.key]}px` }}
+                      >
+                        <div className="sidebar-subhead">
+                          <h3>{section.title}</h3>
+                          <span>{section.subtitle}</span>
+                        </div>
+                        <div className="sidebar-section-body">
+                          {section.content}
+                        </div>
+                      </section>
+                      {nextSection ? (
+                        <div
+                          className={`stack-resize-handle ${filterSectionStack.activeDivider === dividerId ? 'stack-resize-handle-active' : ''}`}
+                          aria-hidden="true"
+                          title="拖动调整上下区块高度，双击恢复默认"
+                          onPointerDown={filterSectionStack.beginResize(section.key, nextSection.key)}
+                          onDoubleClick={filterSectionStack.resetSizes}
+                        />
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -235,7 +331,8 @@ export function Sidebar({
             <button className="button button-secondary" onClick={() => onImport('files')} disabled={isBusy}>导入照片</button>
           </div>
         </div>
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </div>
   );
 }
