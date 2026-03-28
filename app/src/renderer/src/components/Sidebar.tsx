@@ -48,13 +48,13 @@ export function Sidebar({
   return (
     <aside className={`sidebar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <button
-        className={`sidebar-toggle ${isSidebarCollapsed ? 'sidebar-toggle-collapsed' : ''}`}
+        className={`edge-toggle sidebar-toggle ${isSidebarCollapsed ? 'sidebar-toggle-collapsed' : ''}`}
         type="button"
         title={isSidebarCollapsed ? '展开目录' : '收起目录'}
         aria-label={isSidebarCollapsed ? '展开目录' : '收起目录'}
         onClick={onToggleSidebar}
       >
-        <span aria-hidden="true">{isSidebarCollapsed ? '›' : '‹'}</span>
+        <span className="edge-toggle-icon" aria-hidden="true">{isSidebarCollapsed ? '›' : '‹'}</span>
       </button>
       <div className="sidebar-panel">
         <div className="sidebar-head">

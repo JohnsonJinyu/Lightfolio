@@ -27,13 +27,13 @@ export function DetailPanel({
   return (
     <aside className={`detail-panel-shell ${isCollapsed ? 'detail-panel-shell-collapsed' : ''}`} onWheel={onWheel}>
       <button
-        className={`detail-panel-toggle ${isCollapsed ? 'detail-panel-toggle-collapsed' : ''}`}
+        className={`edge-toggle detail-panel-toggle ${isCollapsed ? 'detail-panel-toggle-collapsed' : ''}`}
         type="button"
         aria-label={isCollapsed ? '展开信息栏' : '收起信息栏'}
         title={isCollapsed ? '展开信息栏' : '收起信息栏'}
         onClick={onTogglePanel}
       >
-        <span aria-hidden="true">{isCollapsed ? '‹' : '›'}</span>
+        <span className="edge-toggle-icon" aria-hidden="true">{isCollapsed ? '‹' : '›'}</span>
       </button>
       <div className={`detail-panel-content ${isCollapsed ? 'detail-panel-content-hidden' : ''}`} aria-hidden={isCollapsed}>
         <div className="detail-panel">

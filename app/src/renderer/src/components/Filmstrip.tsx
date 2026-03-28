@@ -34,13 +34,13 @@ export function Filmstrip({
   return (
     <section className={`filmstrip ${isCollapsed ? 'filmstrip-collapsed' : ''}`}>
       <button
-        className={`filmstrip-toggle ${isCollapsed ? 'filmstrip-toggle-collapsed' : ''}`}
+        className={`edge-toggle filmstrip-toggle ${isCollapsed ? 'filmstrip-toggle-collapsed' : ''}`}
         type="button"
         aria-label={isCollapsed ? '展开胶卷栏' : '收起胶卷栏'}
         title={isCollapsed ? '展开胶卷栏' : '收起胶卷栏'}
         onClick={onToggle}
       >
-        <span aria-hidden="true">{isCollapsed ? '‹' : '›'}</span>
+        <span className="edge-toggle-icon" aria-hidden="true">{isCollapsed ? '‹' : '›'}</span>
       </button>
       <div className={`filmstrip-body ${isCollapsed ? 'filmstrip-body-collapsed' : ''}`} aria-hidden={isCollapsed}>
         <div className="filmstrip-head">
