@@ -320,6 +320,10 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
       return;
     }
 
+    if (event.ctrlKey || event.defaultPrevented) {
+      return;
+    }
+
     event.preventDefault();
 
     const now = Date.now();

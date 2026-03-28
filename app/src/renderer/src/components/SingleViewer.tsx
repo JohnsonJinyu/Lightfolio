@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type React from 'react';
 
 import type { AssetRecord } from '@lightfolio/shared';
@@ -52,6 +53,8 @@ export function SingleViewer({
   onToggleFeatured,
   onPreviewError
 }: SingleViewerProps) {
+  const [isZoomAnimating, setIsZoomAnimating] = useState(false);
+
   return (
     <article
       className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''} ${isChromeAnimating ? 'viewer-single-chrome-animating' : ''}`}
@@ -60,17 +63,21 @@ export function SingleViewer({
       <div
         className={`viewer-stage ${isDetailPanelCollapsed ? 'viewer-stage-detail-collapsed' : 'viewer-stage-detail-open'} ${isChromeAnimating ? 'viewer-stage-chrome-animating' : ''}`}
       >
-        <div className="viewer-stage-main" onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
+        <div className={`viewer-stage-main ${isZoomAnimating ? 'viewer-stage-main-zoom-animating' : ''}`} onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
           <div className={`viewer-media viewer-media-${asset.kind} media-${navDirection}`}>
             {!failedPreviewIds.has(asset.id) ? (
               asset.kind === 'image' ? (
-                <ProgressiveSingleImage asset={asset} onError={() => onPreviewError(asset.id)} />
+                <ProgressiveSingleImage
+                  asset={asset}
+                  onError={() => onPreviewError(asset.id)}
+                  onZoomAnimationChange={setIsZoomAnimating}
+                />
               ) : (
                 <div className="video-placeholder detail-media" />
               )
             ) : null}
           </div>
-          <div className="viewer-overlay-meta">
+          <div className={`viewer-overlay-meta ${isZoomAnimating ? 'viewer-overlay-meta-zoom-animating' : ''}`}>
             <span>{formatDate(asset.capturedAt)}</span>
             <strong>{asset.caption?.title ?? asset.fileName}</strong>
             <em>{asset.kind === 'video' ? '视频' : '照片'} · {selectedFolderLabel}</em>

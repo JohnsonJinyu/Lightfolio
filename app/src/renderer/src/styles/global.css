@@ -789,6 +789,10 @@ button {
   transform-origin: center center;
 }
 
+.viewer-stage-main-zoom-animating {
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .viewer-stage-detail-open .viewer-stage-main {
   transform: translateX(-10px);
 }
@@ -816,9 +820,21 @@ button {
   transition: transform 420ms var(--motion-spring), opacity 220ms ease, max-width 420ms var(--motion-spring);
 }
 
+.viewer-overlay-meta-zoom-animating {
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, max-width 420ms var(--motion-spring);
+}
+
 .viewer-stage-detail-open .viewer-overlay-meta {
   transform: translateX(-10px);
   max-width: min(420px, calc(100% - 28px));
+}
+
+.viewer-stage-detail-open .viewer-overlay-meta-zoom-animating {
+  transform: translate(-16px, -6px) scale(1.018);
+}
+
+.viewer-stage-detail-collapsed .viewer-overlay-meta-zoom-animating {
+  transform: translate(-6px, -6px) scale(1.018);
 }
 
 .viewer-overlay-meta span,
@@ -974,6 +990,15 @@ button {
   contain: paint;
   transform: translateZ(0);
   backface-visibility: hidden;
+  user-select: none;
+}
+
+.progressive-stage-pannable {
+  cursor: grab;
+}
+
+.progressive-stage-dragging {
+  cursor: grabbing;
 }
 
 .progressive-stage-ambient {
@@ -1002,13 +1027,61 @@ button {
 
 .detail-media-full {
   opacity: 1;
-  object-fit: contain;
-  transform: translateZ(0);
+  object-fit: fill;
   backface-visibility: hidden;
+  transform-origin: center center;
+  transition: none;
 }
 
 .detail-media-full.detail-media-layer-current {
   z-index: 3;
+}
+
+.detail-media-zoom-animating {
+  transition: width 380ms cubic-bezier(0.22, 1, 0.36, 1), height 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.viewer-zoom-controls {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(14, 21, 31, 0.58);
+  border: 1px solid rgba(228, 239, 255, 0.14);
+  box-shadow: 0 8px 18px rgba(4, 8, 17, 0.16);
+  backdrop-filter: blur(10px) saturate(118%);
+}
+
+.viewer-zoom-button,
+.viewer-zoom-value {
+  border: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #edf3ff;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.viewer-zoom-button:hover,
+.viewer-zoom-value:hover {
+  background: rgba(152, 184, 236, 0.24);
+}
+
+.viewer-zoom-value {
+  min-width: 46px;
+  font-size: 0.7rem;
+}
+
+.viewer-zoom-slider {
+  width: 92px;
+  accent-color: #7eaef5;
 }
 
 .video-placeholder {
