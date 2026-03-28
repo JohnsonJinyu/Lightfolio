@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 
 import type { AssetRecord } from '@lightfolio/shared';
@@ -52,6 +53,60 @@ export function SingleViewer({
   onToggleFeatured,
   onPreviewError
 }: SingleViewerProps) {
+  const fullscreenRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(async () => {
+    const element = fullscreenRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    if (document.fullscreenElement === element) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await element.requestFullscreen();
+  }, []);
+
+  useEffect(() => {
+    function syncFullscreenState() {
+      setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
+    }
+
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    syncFullscreenState();
+
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreenState);
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      const isEditable = target?.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA';
+
+      if (isEditable) {
+        return;
+      }
+
+      if (event.key === 'f' || event.key === 'F' || event.key === 'F11') {
+        event.preventDefault();
+        void toggleFullscreen();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [toggleFullscreen]);
+
   return (
     <article
       className={`viewer-single ${isDetailPanelCollapsed ? 'viewer-single-detail-collapsed' : ''} ${isChromeAnimating ? 'viewer-single-chrome-animating' : ''}`}
@@ -60,7 +115,7 @@ export function SingleViewer({
       <div
         className={`viewer-stage ${isDetailPanelCollapsed ? 'viewer-stage-detail-collapsed' : 'viewer-stage-detail-open'} ${isChromeAnimating ? 'viewer-stage-chrome-animating' : ''}`}
       >
-        <div className="viewer-stage-main" onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
+        <div ref={fullscreenRef} className={`viewer-stage-main ${isFullscreen ? 'viewer-stage-main-fullscreen' : ''}`} onContextMenu={(event) => onOpenAssetMenu(event, asset.id)}>
           <div className={`viewer-media viewer-media-${asset.kind} media-${navDirection}`}>
             {!failedPreviewIds.has(asset.id) ? (
               asset.kind === 'image' ? (
@@ -73,6 +128,14 @@ export function SingleViewer({
               )
             ) : null}
           </div>
+          <button
+            className={`viewer-fullscreen-button ${isFullscreen ? 'viewer-fullscreen-button-active' : ''}`}
+            type="button"
+            aria-label={isFullscreen ? '退出全屏' : '全屏查看'}
+            onClick={() => void toggleFullscreen()}
+          >
+            <span aria-hidden="true">{isFullscreen ? '⤡' : '⤢'}</span>
+          </button>
           <div className="viewer-overlay-meta">
             <span>{formatDate(asset.capturedAt)}</span>
             <strong>{asset.caption?.title ?? asset.fileName}</strong>

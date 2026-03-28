@@ -103,10 +103,6 @@ export function App() {
       .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'zh-CN'))
       .slice(0, 12);
   }, [visibleAssets]);
-  const removedAssets = useMemo(
-    () => removedFromAlbumIds.map((assetId) => assetMap.get(assetId)).filter((asset): asset is AssetRecord => Boolean(asset)),
-    [assetMap, removedFromAlbumIds]
-  );
   const previewFailureCount = failedPreviewIds.size;
   const totalAssets = visibleAssets.length;
   const favoriteCount = useMemo(() => visibleAssets.filter((asset) => asset.isFavorite).length, [visibleAssets]);
@@ -409,29 +405,6 @@ export function App() {
     });
   }
 
-  function restoreAllFromAlbum() {
-    if (removedFromAlbumIds.length === 0) {
-      return;
-    }
-
-    setHiddenAssetIds((previous) => {
-      const next = new Set(previous);
-
-      for (const assetId of removedFromAlbumIds) {
-        next.delete(assetId);
-      }
-
-      return next;
-    });
-
-    setRemovedFromAlbumIds([]);
-    setDeleteFeedback(null);
-    setToast({
-      message: `已恢复 ${removedFromAlbumIds.length} 个资源。`,
-      tone: 'info'
-    });
-  }
-
   function retryFailedPreviews() {
     if (failedPreviewIds.size === 0) {
       return;
@@ -636,8 +609,6 @@ export function App() {
         viewMode={browser.viewMode}
         filters={filters}
         hasActiveFilters={hasActiveFilters}
-        removedAssetsCount={removedAssets.length}
-        isBusy={isBusy}
         onShowShortcutHelp={() => chrome.setShowShortcutHelp(true)}
         onClearFilters={() => setFilters({
           searchQuery: '',
@@ -653,7 +624,6 @@ export function App() {
         onFavoriteOnlyChange={(value) => setFilters((previous) => ({ ...previous, favoriteOnly: value }))}
         onFeaturedOnlyChange={(value) => setFilters((previous) => ({ ...previous, featuredOnly: value }))}
         onViewModeChange={browser.setViewMode}
-        onRestoreAll={restoreAllFromAlbum}
       />
 
       <Sidebar
@@ -747,7 +717,7 @@ export function App() {
           ) : (
             <div className="detail-empty">
               <p>{importState ? '当前筛选条件下没有可展示的作品。' : '还没有导入任何作品。'}</p>
-              <p>{importState ? '可清空搜索、调整筛选条件、切换左侧目录，或恢复已移除资源。' : '先添加一个目录，Lightfolio 会为你构建时间轴。'}</p>
+              <p>{importState ? '可清空搜索、调整筛选条件，或切换左侧目录继续浏览。' : '先添加一个目录，Lightfolio 会为你构建时间轴。'}</p>
             </div>
           )}
 

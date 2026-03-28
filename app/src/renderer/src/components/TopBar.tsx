@@ -7,8 +7,6 @@ interface TopBarProps {
   viewMode: ViewMode;
   filters: BrowserFilters;
   hasActiveFilters: boolean;
-  removedAssetsCount: number;
-  isBusy: boolean;
   onShowShortcutHelp: () => void;
   onClearFilters: () => void;
   onSearchQueryChange: (value: string) => void;
@@ -16,7 +14,6 @@ interface TopBarProps {
   onFavoriteOnlyChange: (value: boolean) => void;
   onFeaturedOnlyChange: (value: boolean) => void;
   onViewModeChange: (mode: ViewMode) => void;
-  onRestoreAll: () => void;
 }
 
 export function TopBar({
@@ -26,16 +23,13 @@ export function TopBar({
   viewMode,
   filters,
   hasActiveFilters,
-  removedAssetsCount,
-  isBusy,
   onShowShortcutHelp,
   onClearFilters,
   onSearchQueryChange,
   onMediaFilterChange,
   onFavoriteOnlyChange,
   onFeaturedOnlyChange,
-  onViewModeChange,
-  onRestoreAll
+  onViewModeChange
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -83,9 +77,6 @@ export function TopBar({
             瀑布流
           </button>
         </div>
-        {removedAssetsCount > 0 ? (
-          <button className="button button-ghost" onClick={onRestoreAll} disabled={isBusy}>恢复已移除 {removedAssetsCount}</button>
-        ) : null}
       </div>
     </header>
   );

@@ -11,6 +11,8 @@ export function ShortcutHelpModal({ onClose }: ShortcutHelpModalProps) {
         <div className="shortcut-list">
           <div><kbd>←</kbd><span>上一张</span></div>
           <div><kbd>→</kbd><span>下一张</span></div>
+          <div><kbd>F</kbd><span>切换主图全屏</span></div>
+          <div><kbd>F11</kbd><span>切换主图全屏</span></div>
           <div><kbd>?</kbd><span>打开或关闭帮助</span></div>
           <div><kbd>Esc</kbd><span>关闭菜单或对话框</span></div>
         </div>
