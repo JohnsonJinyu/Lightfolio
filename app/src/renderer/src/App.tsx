@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 
 import type { AssetRecord, ImportSummary, LibrarySnapshot } from '@lightfolio/shared';
@@ -20,6 +20,7 @@ import type { BrowserFilters, ToastState } from './types';
 import { collectAssetMap, filterTimeline, folderFromPath, mergeImportSummaries, preloadImage, rebuildImportSummary } from './utils';
 
 export function App() {
+  const [waterfallTileSize, setWaterfallTileSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [importState, setImportState] = useState<ImportSummary | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isLibraryReady, setIsLibraryReady] = useState(false);
@@ -120,10 +121,40 @@ export function App() {
     folderItems,
     visibleAssets,
     failedPreviewIds,
-    filters
+    filters,
+    waterfallTileSize
   });
   const chrome = useViewerChrome(browser.selectById);
   const filteredAssets = browser.filteredAssets;
+
+  const cycleWaterfallTileSize = useCallback((direction: 1 | -1) => {
+    const sizeOrder: Array<'small' | 'medium' | 'large'> = ['small', 'medium', 'large'];
+
+    setWaterfallTileSize((current) => {
+      const currentIndex = sizeOrder.indexOf(current);
+      const nextIndex = Math.max(0, Math.min(sizeOrder.length - 1, currentIndex + direction));
+      return sizeOrder[nextIndex] ?? current;
+    });
+  }, []);
+
+  const onWaterfallWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+
+    if (delta > 6) {
+      cycleWaterfallTileSize(-1);
+      return;
+    }
+
+    if (delta < -6) {
+      cycleWaterfallTileSize(1);
+    }
+  }, [cycleWaterfallTileSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -607,6 +638,7 @@ export function App() {
         totalAssets={totalAssets}
         filteredAssetsCount={filteredAssets.length}
         viewMode={browser.viewMode}
+        waterfallTileSize={waterfallTileSize}
         filters={filters}
         hasActiveFilters={hasActiveFilters}
         onShowShortcutHelp={() => chrome.setShowShortcutHelp(true)}
@@ -624,6 +656,7 @@ export function App() {
         onFavoriteOnlyChange={(value) => setFilters((previous) => ({ ...previous, favoriteOnly: value }))}
         onFeaturedOnlyChange={(value) => setFilters((previous) => ({ ...previous, featuredOnly: value }))}
         onViewModeChange={browser.setViewMode}
+        onWaterfallTileSizeChange={setWaterfallTileSize}
       />
 
       <Sidebar
@@ -708,6 +741,7 @@ export function App() {
                 layout={browser.waterfallLayout}
                 visibleItems={browser.waterfallVisible}
                 containerRef={browser.waterfallRef}
+                onWheel={onWaterfallWheel}
                 onSelectById={browser.selectById}
                 onOpenAssetMenu={chrome.openAssetMenu}
                 onPreviewError={markPreviewFailed}

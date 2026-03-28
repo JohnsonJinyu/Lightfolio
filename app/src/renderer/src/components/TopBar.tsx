@@ -5,6 +5,7 @@ interface TopBarProps {
   totalAssets: number;
   filteredAssetsCount: number;
   viewMode: ViewMode;
+  waterfallTileSize: 'small' | 'medium' | 'large';
   filters: BrowserFilters;
   hasActiveFilters: boolean;
   onShowShortcutHelp: () => void;
@@ -14,6 +15,7 @@ interface TopBarProps {
   onFavoriteOnlyChange: (value: boolean) => void;
   onFeaturedOnlyChange: (value: boolean) => void;
   onViewModeChange: (mode: ViewMode) => void;
+  onWaterfallTileSizeChange: (size: 'small' | 'medium' | 'large') => void;
 }
 
 export function TopBar({
@@ -21,6 +23,7 @@ export function TopBar({
   totalAssets,
   filteredAssetsCount,
   viewMode,
+  waterfallTileSize,
   filters,
   hasActiveFilters,
   onShowShortcutHelp,
@@ -29,7 +32,8 @@ export function TopBar({
   onMediaFilterChange,
   onFavoriteOnlyChange,
   onFeaturedOnlyChange,
-  onViewModeChange
+  onViewModeChange,
+  onWaterfallTileSizeChange
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -67,6 +71,21 @@ export function TopBar({
         </button>
         {hasActiveFilters ? (
           <button className="button button-ghost" onClick={onClearFilters}>清空筛选</button>
+        ) : null}
+        {viewMode === 'waterfall' ? (
+          <div className="topbar-size-switch view-switch" role="group" aria-label="瀑布流照片大小">
+            <span className="topbar-size-switch-label">照片大小</span>
+            <button className={`button button-tab ${waterfallTileSize === 'small' ? 'button-tab-active' : ''}`} onClick={() => onWaterfallTileSizeChange('small')}>
+              紧凑
+            </button>
+            <button className={`button button-tab ${waterfallTileSize === 'medium' ? 'button-tab-active' : ''}`} onClick={() => onWaterfallTileSizeChange('medium')}>
+              标准
+            </button>
+            <button className={`button button-tab ${waterfallTileSize === 'large' ? 'button-tab-active' : ''}`} onClick={() => onWaterfallTileSizeChange('large')}>
+              放大
+            </button>
+            <span className="topbar-size-switch-hint">Ctrl + 滚轮</span>
+          </div>
         ) : null}
         <button className="button button-ghost" onClick={onShowShortcutHelp}>快捷键</button>
         <div className="view-switch">

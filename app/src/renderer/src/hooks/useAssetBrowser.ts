@@ -13,6 +13,7 @@ interface UseAssetBrowserOptions {
   visibleAssets: AssetRecord[];
   failedPreviewIds: Set<string>;
   filters: BrowserFilters;
+  waterfallTileSize: 'small' | 'medium' | 'large';
 }
 
 interface WaterfallMetricsState {
@@ -21,7 +22,13 @@ interface WaterfallMetricsState {
   scrollTop: number;
 }
 
-export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, failedPreviewIds, filters }: UseAssetBrowserOptions) {
+const WATERFALL_MIN_TILE_WIDTH_BY_SIZE = {
+  small: 168,
+  medium: WATERFALL_MIN_TILE_WIDTH,
+  large: 272
+} as const;
+
+export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, failedPreviewIds, filters, waterfallTileSize }: UseAssetBrowserOptions) {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('single');
@@ -96,7 +103,8 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
 
   const waterfallLayout: WaterfallLayoutMetrics = useMemo(() => {
     const width = Math.max(0, waterfallMetrics.width);
-    const columns = Math.max(1, Math.floor((width + WATERFALL_GAP) / (WATERFALL_MIN_TILE_WIDTH + WATERFALL_GAP)));
+    const minTileWidth = WATERFALL_MIN_TILE_WIDTH_BY_SIZE[waterfallTileSize];
+    const columns = Math.max(1, Math.floor((width + WATERFALL_GAP) / (minTileWidth + WATERFALL_GAP)));
     const columnWidth = Math.max(160, Math.floor((width - WATERFALL_GAP * (columns - 1)) / columns));
     const columnHeights = Array.from({ length: columns }, () => 0);
     const items = filteredAssets.map((asset, index) => {
@@ -143,7 +151,7 @@ export function useAssetBrowser({ isLibraryReady, folderItems, visibleAssets, fa
       totalHeight,
       items
     };
-  }, [filteredAssets, waterfallMetrics.width]);
+  }, [filteredAssets, waterfallMetrics.width, waterfallTileSize]);
 
   const waterfallVisible: WaterfallVisibleItem[] = useMemo(() => {
     const viewportTop = Math.max(0, waterfallMetrics.scrollTop - 480);

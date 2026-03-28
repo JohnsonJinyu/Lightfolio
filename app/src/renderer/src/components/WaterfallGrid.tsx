@@ -9,6 +9,7 @@ interface WaterfallGridProps {
   layout: WaterfallLayoutMetrics;
   visibleItems: WaterfallVisibleItem[];
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onWheel: (event: React.WheelEvent<HTMLDivElement>) => void;
   onSelectById: (assetId: string) => void;
   onOpenAssetMenu: (event: React.MouseEvent, assetId: string) => void;
   onPreviewError: (assetId: string) => void;
@@ -20,12 +21,13 @@ export function WaterfallGrid({
   layout,
   visibleItems,
   containerRef,
+  onWheel,
   onSelectById,
   onOpenAssetMenu,
   onPreviewError
 }: WaterfallGridProps) {
   return (
-    <div className="waterfall-grid" ref={containerRef}>
+    <div className="waterfall-grid" ref={containerRef} onWheel={onWheel}>
       <div className="waterfall-canvas" style={{ height: layout.totalHeight }}>
         {visibleItems.map(({ asset, tile }) => {
           return (
