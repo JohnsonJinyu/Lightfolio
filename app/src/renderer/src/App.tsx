@@ -697,7 +697,7 @@ export function App() {
         onImport={runImport}
       />
 
-      <main className={`content ${chrome.isFilmstripCollapsed ? 'content-filmstrip-collapsed' : ''}`}>
+      <main className="content">
         <section className="viewer">
           {browser.isViewerLoading || (isBusy && !importState) ? (
             <div className="viewer-loading">
@@ -753,22 +753,22 @@ export function App() {
 
           {deleteFeedback ? <p className="feedback-line">{deleteFeedback}</p> : null}
         </section>
-
-        <Filmstrip
-          isCollapsed={chrome.isFilmstripCollapsed}
-          assets={filteredAssets}
-          selectedId={browser.selected?.id ?? null}
-          failedPreviewIds={failedPreviewIds}
-          trackRef={browser.filmstripTrackRef}
-          onResizeStart={layout.beginResize('filmstrip')}
-          onResizeReset={layout.resetSize('filmstrip')}
-          onWheel={browser.onFilmstripWheel}
-          onToggle={chrome.toggleFilmstrip}
-          onSelectById={browser.selectById}
-          onOpenAssetMenu={chrome.openAssetMenu}
-          onPreviewError={markPreviewFailed}
-        />
       </main>
+
+      <Filmstrip
+        isCollapsed={chrome.isFilmstripCollapsed}
+        assets={filteredAssets}
+        selectedId={browser.selected?.id ?? null}
+        failedPreviewIds={failedPreviewIds}
+        trackRef={browser.filmstripTrackRef}
+        onResizeStart={layout.beginResize('filmstrip')}
+        onResizeReset={layout.resetSize('filmstrip')}
+        onWheel={browser.onFilmstripWheel}
+        onToggle={chrome.toggleFilmstrip}
+        onSelectById={browser.selectById}
+        onOpenAssetMenu={chrome.openAssetMenu}
+        onPreviewError={markPreviewFailed}
+      />
 
       {chrome.contextMenu && contextAsset ? (
         <ContextMenu
