@@ -51,6 +51,7 @@ Lightfolio 是一个面向个人摄影作品管理、回看与展示的本地电
 - app: Electron 主进程、preload 桥接、React renderer
 - core: 导入、索引、EXIF 解析、存储逻辑
 - shared: 共享类型、协议与公共数据结构
+- winui: WinUI 3 + C# 迁移中的原生 Windows 版本骨架
 - docs: 需求、阶段计划与开发日志
 
 ## 开发环境
@@ -103,3 +104,43 @@ npm run build
 - 开发日志见 [docs/development-log.md](docs/development-log.md)
 - 需求记录见 [docs/requirements.md](docs/requirements.md)
 - Windows 版本规划见 [docs/lightfolio-win11-photos-plan.md](docs/lightfolio-win11-photos-plan.md)
+- WinUI 3 迁移方案见 [docs/lightfolio-winui3-migration-plan.md](docs/lightfolio-winui3-migration-plan.md)
+
+## WinUI 3 迁移状态
+
+仓库内已经新增第一批 WinUI 3 骨架代码，当前目标是并行迁移，而不是立刻删除 Electron 版本。
+
+当前已完成：
+
+- 新增 `winui/Lightfolio.WinUI` 与 `winui/Lightfolio.Contracts`
+- 新增 WinUI 3 主窗口与首屏 Shell 页面
+- 已将 `LibrarySnapshot`、`AssetRecord` 等基础模型迁移为 C# 契约模型
+- WinUI 首屏已能读取本地图库快照候选路径并展示基础资产列表
+- WinUI 浏览骨架已支持按月份分组的时间轴视图
+- WinUI 左侧已接入搜索、仅收藏、仅精选三类基础筛选入口
+- WinUI 已接入浏览态与查看态切换，以及上一张/下一张导航骨架
+- WinUI 查看态已补齐更完整的作品详情结构，等待下一步接入真实位图与缩放交互
+- WinUI 查看态现已能直接尝试加载本地图片，并对视频、缺文件和加载失败场景提供占位兜底
+- WinUI 查看器现已支持基础缩放按钮、倍率显示，以及左右方向键、Esc、加减号、0 等查看态快捷操作
+- WinUI 查看器现已支持 Ctrl + 滚轮缩放，以及放大后的鼠标拖拽平移浏览
+- WinUI 查看器现已支持双击在放大查看和适配视图之间切换
+- WinUI 查看态现已接入底部胶片带，可直接在当前筛选结果中横向切换资源
+- WinUI 胶片带现已优先显示真实图片缩略图，视频和不可用文件会回退到占位卡片
+- WinUI 胶片带现在会在当前资源切换时自动滚动到对应位置，连续浏览更连贯
+- WinUI 查看态现已为视频资源接入原生播放控件，主查看区不再停留在文字占位
+
+当前可验证命令：
+
+```powershell
+cd winui/Lightfolio.WinUI
+dotnet build -c Debug -p:Platform=x64
+```
+
+当前本地启动说明：
+
+- 该 WinUI 工程在这台机器上已禁用 `WindowsAppSdkDeploymentManagerInitialize`，以绕过本地 `DeploymentManager` COM 未注册导致的启动崩溃
+- 该 WinUI 工程的 `Debug` 配置已切换为 `WindowsPackageType=None` 并显式启用 `WindowsAppSdkBootstrapInitialize`，以便在 VS Code 下按 unpackaged 桌面应用方式启动
+- 构建产物可直接运行：`winui/Lightfolio.WinUI/bin/x64/Debug/net10.0-windows10.0.26100.0/Lightfolio.WinUI.exe`
+- 不要对 `MainWindow.xaml.cs` 或其他单个 C# 文件使用 VS Code 的“运行当前文件”；WinUI 3 是项目型桌面应用，应通过工作区级启动配置或直接运行构建产物来启动
+- 当前工作区已补充 `.vscode/tasks.json` 和 `.vscode/launch.json`，可直接在 VS Code 的“运行和调试”里选择 `Lightfolio WinUI`
+- VS Code 里 `App.xaml.cs`、`MainWindow.xaml.cs`、`ShellPage.xaml.cs` 上出现的 `InitializeComponent`、`ViewerScrollHost`、`FilmstripListView` 等红线，当前属于 WinUI/XAML 生成代码的设计期假阳性；以 `dotnet build -c Debug -p:Platform=x64` 是否通过为准

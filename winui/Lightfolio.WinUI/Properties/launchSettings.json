@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Lightfolio.WinUI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Lightfolio.WinUI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

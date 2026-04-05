@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Lightfolio WinUI",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/winui/Lightfolio.WinUI/Lightfolio.WinUI.csproj",
+        "-c",
+        "Debug",
+        "-p:Platform=x64"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Lightfolio WinUI",
+      "type": "shell",
+      "command": "${workspaceFolder}/winui/Lightfolio.WinUI/bin/x64/Debug/net10.0-windows10.0.26100.0/Lightfolio.WinUI.exe",
+      "dependsOn": "Build Lightfolio WinUI",
+      "problemMatcher": []
+    }
+  ]
+}

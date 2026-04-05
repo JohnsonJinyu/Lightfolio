@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, ...</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, ...</value>
+  </resheader>
+  <data name="MainWindowTitle.Text" xml:space="preserve">
+    <value>Lightfolio WinUI 3</value>
+  </data>
+  <data name="ShellHeaderTitle.Text" xml:space="preserve">
+    <value>Lightfolio WinUI 3 迁移首屏</value>
+  </data>
+  <data name="ShellHeaderSubtitle.Text" xml:space="preserve">
+    <value>这一版已经接入时间轴浏览，正在继续把单图查看、导航和详情信息迁到原生壳层。</value>
+  </data>
+  <data name="ShellReloadButton.Content" xml:space="preserve">
+    <value>重新加载</value>
+  </data>
+  <data name="ShellOverviewTitle.Text" xml:space="preserve">
+    <value>库概览</value>
+  </data>
+  <data name="ShellStatusLabel.Text" xml:space="preserve">
+    <value>当前状态</value>
+  </data>
+  <data name="ShellSnapshotPathLabel.Text" xml:space="preserve">
+    <value>快照路径</value>
+  </data>
+  <data name="ShellAssetCountLabel.Text" xml:space="preserve">
+    <value>资源总数</value>
+  </data>
+  <data name="ShellFavoriteCountLabel.Text" xml:space="preserve">
+    <value>收藏数量</value>
+  </data>
+  <data name="ShellFeaturedCountLabel.Text" xml:space="preserve">
+    <value>精选数量</value>
+  </data>
+  <data name="ShellRemovedCountLabel.Text" xml:space="preserve">
+    <value>已移除数量</value>
+  </data>
+  <data name="ShellMonthGroupsLabel.Text" xml:space="preserve">
+    <value>月份分组</value>
+  </data>
+  <data name="ShellFilterTitle.Text" xml:space="preserve">
+    <value>筛选条件</value>
+  </data>
+  <data name="ShellSearchBox.Header" xml:space="preserve">
+    <value>搜索标题、路径、标签、设备</value>
+  </data>
+  <data name="ShellFavoriteFilterButton.Content" xml:space="preserve">
+    <value>切换仅收藏</value>
+  </data>
+  <data name="ShellFeaturedFilterButton.Content" xml:space="preserve">
+    <value>切换仅精选</value>
+  </data>
+  <data name="ShellClearFiltersButton.Content" xml:space="preserve">
+    <value>清空筛选</value>
+  </data>
+  <data name="ShellTimelineTitle.Text" xml:space="preserve">
+    <value>时间轴浏览</value>
+  </data>
+  <data name="ShellTimelineSubtitle.Text" xml:space="preserve">
+    <value>当前按月份展示资源，并且已经接入进入单图查看的基础切换。</value>
+  </data>
+  <data name="ShellOpenViewerButton.Content" xml:space="preserve">
+    <value>打开查看器</value>
+  </data>
+  <data name="ShellDetailTitle.Text" xml:space="preserve">
+    <value>当前选中资源</value>
+  </data>
+  <data name="ShellDetailPathLabel.Text" xml:space="preserve">
+    <value>文件路径</value>
+  </data>
+  <data name="ShellDetailTechnicalLabel.Text" xml:space="preserve">
+    <value>拍摄与技术信息</value>
+  </data>
+  <data name="ShellDetailTagsLabel.Text" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="ShellViewerBackButton.Content" xml:space="preserve">
+    <value>返回时间轴</value>
+  </data>
+  <data name="ShellViewerPreviousButton.Content" xml:space="preserve">
+    <value>上一张</value>
+  </data>
+  <data name="ShellViewerNextButton.Content" xml:space="preserve">
+    <value>下一张</value>
+  </data>
+  <data name="ShellViewerZoomOutButton.Content" xml:space="preserve">
+    <value>缩小</value>
+  </data>
+  <data name="ShellViewerZoomResetButton.Content" xml:space="preserve">
+    <value>适配</value>
+  </data>
+  <data name="ShellViewerZoomInButton.Content" xml:space="preserve">
+    <value>放大</value>
+  </data>
+  <data name="ShellViewerStageTitle.Text" xml:space="preserve">
+    <value>单图查看骨架</value>
+  </data>
+  <data name="ShellViewerStageSubtitle.Text" xml:space="preserve">
+    <value>这一块先完成 WinUI 原生查看态、前后切换和信息组织，下一步再接真实位图、缩放和平移。</value>
+  </data>
+  <data name="ShellViewerStageCaptureLabel.Text" xml:space="preserve">
+    <value>拍摄信息</value>
+  </data>
+  <data name="ShellViewerStageExposureLabel.Text" xml:space="preserve">
+    <value>设备与曝光</value>
+  </data>
+  <data name="ShellViewerDetailTitle.Text" xml:space="preserve">
+    <value>作品详情</value>
+  </data>
+  <data name="ShellViewerFilmstripTitle.Text" xml:space="preserve">
+    <value>底部胶片带</value>
+  </data>
+  <data name="ShellViewerMetaStatus.Text" xml:space="preserve">
+    <value>资源类型</value>
+  </data>
+  <data name="ShellViewerMetaCapture.Text" xml:space="preserve">
+    <value>拍摄信息</value>
+  </data>
+  <data name="ShellViewerMetaExposure.Text" xml:space="preserve">
+    <value>设备与曝光</value>
+  </data>
+  <data name="ShellViewerMetaLocation.Text" xml:space="preserve">
+    <value>位置</value>
+  </data>
+  <data name="ShellViewerMetaImported.Text" xml:space="preserve">
+    <value>导入时间</value>
+  </data>
+</root>

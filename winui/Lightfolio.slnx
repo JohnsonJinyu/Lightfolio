@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Lightfolio.Contracts/Lightfolio.Contracts.csproj" />
+  <Project Path="Lightfolio.WinUI/Lightfolio.WinUI.csproj">
+    <Platform Project="x86" />
+  </Project>
+</Solution>

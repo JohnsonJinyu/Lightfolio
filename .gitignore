@@ -8,3 +8,6 @@ Thumbs.db
 coverage/
 app/out/
 app/dist/
+**/bin/
+**/obj/
+.vscode/settings.json
