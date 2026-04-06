@@ -1,0 +1,48 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="512" y1="48" x2="512" y2="976" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1521"/>
+      <stop offset="0.56" stop-color="#102433"/>
+      <stop offset="1" stop-color="#173B55"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(358 302) rotate(43.0981) scale(352.311)">
+      <stop stop-color="#B6E3FF" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#B6E3FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cardBack" x1="308" y1="228" x2="620" y2="792" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#274159" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#152433" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="cardFront" x1="362" y1="232" x2="692" y2="836" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#13293B"/>
+      <stop offset="1" stop-color="#0D1D2D"/>
+    </linearGradient>
+    <linearGradient id="glyph" x1="468" y1="326" x2="468" y2="702" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E2F5FF"/>
+      <stop offset="0.16" stop-color="#BFE6FF"/>
+      <stop offset="1" stop-color="#67B9F0"/>
+    </linearGradient>
+    <linearGradient id="finder" x1="414" y1="278" x2="650" y2="736" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8F7FF" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#8ECCF5" stop-opacity="0.42"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <circle cx="328" cy="284" r="220" fill="url(#halo)"/>
+
+  <rect x="280" y="252" width="380" height="516" rx="88" transform="rotate(-8 280 252)" fill="url(#cardBack)" stroke="#D7EEFF" stroke-opacity="0.12" stroke-width="16"/>
+  <rect x="360" y="214" width="336" height="584" rx="92" fill="url(#cardFront)" stroke="#E4F2FF" stroke-opacity="0.18" stroke-width="16"/>
+  <rect x="390" y="244" width="276" height="524" rx="68" stroke="#E4F2FF" stroke-opacity="0.08" stroke-width="8"/>
+
+  <path d="M434 314V374H410V290H494V314H434Z" fill="url(#finder)"/>
+  <path d="M622 290H646V374H622V314H562V290H622Z" fill="url(#finder)"/>
+  <path d="M410 638H434V698H494V722H410V638Z" fill="url(#finder)"/>
+  <path d="M622 698V638H646V722H562V698H622Z" fill="url(#finder)"/>
+
+  <rect x="446" y="332" width="92" height="250" rx="46" fill="url(#glyph)"/>
+  <rect x="446" y="558" width="214" height="92" rx="46" fill="url(#glyph)"/>
+
+  <circle cx="608" cy="372" r="26" fill="#DFF4FF" fill-opacity="0.9"/>
+  <circle cx="608" cy="372" r="12" fill="#79C3F6"/>
+</svg>

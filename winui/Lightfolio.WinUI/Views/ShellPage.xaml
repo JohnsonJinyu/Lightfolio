@@ -22,28 +22,29 @@
         <SolidColorBrush x:Key="ShellTextBrush" Color="#FFF3F7FC" />
         <SolidColorBrush x:Key="ShellSubtleTextBrush" Color="#CCB6C4D5" />
         <SolidColorBrush x:Key="ShellFaintTextBrush" Color="#9995A7BC" />
+        <SolidColorBrush x:Key="ShellDividerBrush" Color="#24F3F7FC" />
 
         <Style x:Key="PanelBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource ShellPanelBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource ShellStrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="CornerRadius" Value="16" />
         </Style>
 
         <Style x:Key="ChromeButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Padding" Value="10,6" />
             <Setter Property="Background" Value="{StaticResource ShellPanelMutedBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource ShellStrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Foreground" Value="{StaticResource ShellTextBrush}" />
         </Style>
 
         <Style x:Key="EdgeButtonStyle" TargetType="Button" BasedOn="{StaticResource ChromeButtonStyle}">
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="32" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
@@ -59,7 +60,7 @@
         </Style>
 
         <Style x:Key="PrimaryValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource ShellTextBrush}" />
             <Setter Property="TextWrapping" Value="WrapWholeWords" />
@@ -67,7 +68,7 @@
     </Page.Resources>
 
     <Grid Background="{StaticResource ShellWindowBrush}">
-        <Grid Padding="18" RowSpacing="12">
+        <Grid Padding="12" RowSpacing="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -79,44 +80,32 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Row="0" Grid.ColumnSpan="3" Padding="18,14" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelAltBrush}">
-                <Grid ColumnSpacing="14">
+            <Border Grid.Row="0" Grid.ColumnSpan="3" Padding="14,10" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelAltBrush}">
+                <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="320" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="280" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-                        <TextBlock Text="Lightfolio" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
-                        <TextBlock Text="WinUI 工作台" Foreground="{StaticResource ShellSubtleTextBrush}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                        <TextBlock Text="{x:Bind ViewModel.ShellModeText, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
-                        <TextBlock Text="{x:Bind ViewModel.ActiveFilterSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                    <TextBlock Grid.Column="0" Text="Lightfolio" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" VerticalAlignment="Center" />
 
                     <TextBox Grid.Column="2" Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="搜索标题、路径、标签、设备" VerticalAlignment="Center" />
 
-                    <Button Grid.Column="3" Style="{StaticResource ChromeButtonStyle}" Content="{x:Bind ViewModel.FavoriteFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFavoriteFilterCommand}" />
-                    <Button Grid.Column="4" Style="{StaticResource ChromeButtonStyle}" Content="{x:Bind ViewModel.FeaturedFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFeaturedFilterCommand}" />
-                    <Button Grid.Column="5" Style="{StaticResource ChromeButtonStyle}" Content="导入照片" Command="{x:Bind ViewModel.ImportFilesCommand}" />
-                    <Button Grid.Column="6" Style="{StaticResource ChromeButtonStyle}" Content="导入文件夹" Command="{x:Bind ViewModel.ImportFolderCommand}" />
+                    <Button Grid.Column="3" Style="{StaticResource ChromeButtonStyle}" Content="导入照片" Command="{x:Bind ViewModel.ImportFilesCommand}" />
+                    <Button Grid.Column="4" Style="{StaticResource ChromeButtonStyle}" Content="导入文件夹" Command="{x:Bind ViewModel.ImportFolderCommand}" />
 
-                    <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <Button Style="{StaticResource ChromeButtonStyle}" Content="重置筛选" Command="{x:Bind ViewModel.ClearFiltersCommand}" />
                         <Button Style="{StaticResource ChromeButtonStyle}" Content="重新加载" Command="{x:Bind ViewModel.ReloadCommand}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <Border x:Name="SidebarHost" Grid.Row="1" Grid.Column="0" Width="296" Style="{StaticResource PanelBorderStyle}" Padding="0">
+            <Border x:Name="SidebarHost" Grid.Row="1" Grid.Column="0" Width="256" Style="{StaticResource PanelBorderStyle}" Padding="0">
                 <Grid>
                     <Grid Visibility="{x:Bind ViewModel.SidebarExpandedVisibility, Mode=OneWay}">
                         <Grid.RowDefinitions>
@@ -124,31 +113,31 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Padding="16,14,16,12" ColumnSpacing="10">
+                        <Grid Padding="12,10,12,8" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Spacing="2">
-                                <TextBlock Text="资料库" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
-                                <TextBlock Text="目录、筛选与状态总览" Foreground="{StaticResource ShellSubtleTextBrush}" />
+                                <TextBlock Text="资料库" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
+                                <TextBlock Text="目录与筛选" Foreground="{StaticResource ShellSubtleTextBrush}" />
                             </StackPanel>
 
                             <Button Grid.Column="1" Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.SidebarToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleSidebarCommand}" />
                         </Grid>
 
-                        <ScrollViewer Grid.Row="1" Padding="16,0,16,16" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Spacing="14">
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Text="当前状态" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.LibraryStatus, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                        <TextBlock Text="{x:Bind ViewModel.SnapshotPath, Mode=OneWay}" Foreground="{StaticResource ShellFaintTextBrush}" TextWrapping="WrapWholeWords" MaxLines="3" />
-                                    </StackPanel>
-                                </Border>
+                        <ScrollViewer Grid.Row="1" Padding="12,0,12,12" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="0">
+                                <StackPanel Spacing="6" Margin="0,0,0,10">
+                                    <TextBlock Text="当前状态" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.LibraryStatus, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" MaxLines="2" />
+                                    <TextBlock Text="{x:Bind ViewModel.SnapshotPath, Mode=OneWay}" Foreground="{StaticResource ShellFaintTextBrush}" TextWrapping="WrapWholeWords" MaxLines="2" />
+                                </StackPanel>
 
-                                <Grid ColumnSpacing="10" RowSpacing="10">
+                                <Border Height="1" Background="{StaticResource ShellDividerBrush}" Margin="0,0,0,10" />
+
+                                <Grid ColumnSpacing="16" RowSpacing="10" Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -159,61 +148,51 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="12">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="资源总数" Style="{StaticResource SectionTitleStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.AssetCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="资源总数" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="{x:Bind ViewModel.AssetCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="12">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="当前可见" Style="{StaticResource SectionTitleStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.VisibleAssetCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="当前可见" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="{x:Bind ViewModel.VisibleAssetCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="12">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="收藏数量" Style="{StaticResource SectionTitleStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.FavoriteCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="收藏数量" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="{x:Bind ViewModel.FavoriteCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="12">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="精选数量" Style="{StaticResource SectionTitleStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.FeaturedCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="精选数量" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="{x:Bind ViewModel.FeaturedCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="12">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="时间分组" Style="{StaticResource SectionTitleStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.VisibleMonthGroupCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="2">
+                                        <TextBlock Text="时间分组" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="{x:Bind ViewModel.VisibleMonthGroupCountText, Mode=OneWay}" Style="{StaticResource PrimaryValueStyle}" />
+                                    </StackPanel>
                                 </Grid>
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Text="筛选工具" Style="{StaticResource SectionTitleStyle}" />
-                                        <ComboBox Header="媒体类型" ItemsSource="{x:Bind ViewModel.MediaFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedMediaFilter, Mode=TwoWay}" />
-                                        <ComboBox Header="拍摄设备" ItemsSource="{x:Bind ViewModel.CameraFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCameraFilter, Mode=TwoWay}" />
-                                        <ComboBox Header="镜头" ItemsSource="{x:Bind ViewModel.LensFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedLensFilter, Mode=TwoWay}" />
-                                        <Button Style="{StaticResource FilterButtonStyle}" Content="{x:Bind ViewModel.FavoriteFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFavoriteFilterCommand}" />
-                                        <Button Style="{StaticResource FilterButtonStyle}" Content="{x:Bind ViewModel.FeaturedFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFeaturedFilterCommand}" />
-                                        <Button Style="{StaticResource FilterButtonStyle}" Content="导入照片" Command="{x:Bind ViewModel.ImportFilesCommand}" />
-                                        <Button Style="{StaticResource FilterButtonStyle}" Content="导入文件夹" Command="{x:Bind ViewModel.ImportFolderCommand}" />
-                                        <Button Style="{StaticResource FilterButtonStyle}" Content="清空全部筛选" Command="{x:Bind ViewModel.ClearFiltersCommand}" />
-                                        <TextBlock Text="{x:Bind ViewModel.ActiveFilterSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <Border Height="1" Background="{StaticResource ShellDividerBrush}" Margin="0,0,0,10" />
+
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="筛选工具" Style="{StaticResource SectionTitleStyle}" />
+                                    <ComboBox Header="媒体类型" ItemsSource="{x:Bind ViewModel.MediaFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedMediaFilter, Mode=TwoWay}" />
+                                    <ComboBox Header="拍摄设备" ItemsSource="{x:Bind ViewModel.CameraFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCameraFilter, Mode=TwoWay}" />
+                                    <ComboBox Header="镜头" ItemsSource="{x:Bind ViewModel.LensFilterOptions, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedLensFilter, Mode=TwoWay}" />
+                                    <Button Style="{StaticResource FilterButtonStyle}" Content="{x:Bind ViewModel.FavoriteFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFavoriteFilterCommand}" />
+                                    <Button Style="{StaticResource FilterButtonStyle}" Content="{x:Bind ViewModel.FeaturedFilterButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFeaturedFilterCommand}" />
+                                    <Button Style="{StaticResource FilterButtonStyle}" Content="导入照片" Command="{x:Bind ViewModel.ImportFilesCommand}" />
+                                    <Button Style="{StaticResource FilterButtonStyle}" Content="导入文件夹" Command="{x:Bind ViewModel.ImportFolderCommand}" />
+                                    <Button Style="{StaticResource FilterButtonStyle}" Content="清空全部筛选" Command="{x:Bind ViewModel.ClearFiltersCommand}" />
+                                    <TextBlock Text="{x:Bind ViewModel.ActiveFilterSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
 
-                    <StackPanel Visibility="{x:Bind ViewModel.SidebarCollapsedVisibility, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Stretch" Spacing="12" Padding="8,14">
+                    <StackPanel Visibility="{x:Bind ViewModel.SidebarCollapsedVisibility, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Stretch" Spacing="10" Padding="8,10">
                         <Button Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.SidebarToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleSidebarCommand}" />
                         <TextBlock Text="库" Foreground="{StaticResource ShellFaintTextBrush}" />
                         <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="6">
@@ -241,37 +220,37 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Padding="18,16,18,12" ColumnSpacing="12">
+                        <Grid Padding="14,12,14,10" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Spacing="4">
-                                <TextBlock Text="时间轴" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
+                                <TextBlock Text="时间轴" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
                                 <TextBlock Text="{x:Bind ViewModel.ActiveFilterSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" />
                             </StackPanel>
 
                             <Button Grid.Column="1" Style="{StaticResource ChromeButtonStyle}" Content="进入查看器" Command="{x:Bind ViewModel.EnterViewerModeCommand}" IsEnabled="{x:Bind ViewModel.HasSelection, Mode=OneWay}" />
                         </Grid>
 
-                        <ScrollViewer Grid.Row="1" Padding="18,0,18,18" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer Grid.Row="1" Padding="14,0,14,14" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{x:Bind ViewModel.TimelineGroups, Mode=OneWay}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="viewModels:TimelineGroupViewModel">
-                                        <StackPanel Margin="0,0,0,20" Spacing="12">
+                                        <StackPanel Margin="0,0,0,16" Spacing="10">
                                             <StackPanel Spacing="2">
-                                                <TextBlock Text="{x:Bind Label}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
+                                                <TextBlock Text="{x:Bind Label}" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
                                                 <TextBlock Text="{x:Bind CoverTitle}" Foreground="{StaticResource ShellSubtleTextBrush}" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
 
                                             <GridView ItemsSource="{x:Bind Assets}" IsItemClickEnabled="True" ItemClick="OnTimelineAssetClick" SelectionMode="Single" SelectedItem="{Binding ElementName=RootPage, Path=ViewModel.SelectedAsset, Mode=TwoWay}">
                                                 <GridView.ItemTemplate>
                                                     <DataTemplate x:DataType="viewModels:AssetItemViewModel">
-                                                        <Border Width="228" Height="178" Padding="10" Margin="0,0,10,10" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}">
-                                                            <Grid RowSpacing="10">
+                                                        <Border Width="204" Height="160" Padding="8" Margin="0,0,8,8" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}">
+                                                            <Grid RowSpacing="8">
                                                                 <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="104" />
+                                                                    <RowDefinition Height="96" />
                                                                     <RowDefinition Height="Auto" />
                                                                 </Grid.RowDefinitions>
 
@@ -288,9 +267,9 @@
                                                                     </Border>
                                                                 </Grid>
 
-                                                                <StackPanel Grid.Row="1" Spacing="4">
-                                                                    <TextBlock Text="{x:Bind Title}" Foreground="{StaticResource ShellTextBrush}" FontWeight="SemiBold" MaxLines="2" TextWrapping="WrapWholeWords" />
-                                                                    <TextBlock Text="{x:Bind Subtitle}" Foreground="{StaticResource ShellSubtleTextBrush}" TextTrimming="CharacterEllipsis" />
+                                                                <StackPanel Grid.Row="1" Spacing="3">
+                                                                    <TextBlock Text="{x:Bind Title}" Foreground="{StaticResource ShellTextBrush}" FontWeight="SemiBold" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{x:Bind Subtitle}" Foreground="{StaticResource ShellSubtleTextBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                                                 </StackPanel>
                                                             </Grid>
                                                         </Border>
@@ -312,7 +291,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Padding="18,16,18,12" ColumnSpacing="12">
+                        <Grid Padding="14,12,14,10" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -325,45 +304,38 @@
                             <Button Grid.Column="0" Style="{StaticResource ChromeButtonStyle}" Content="返回时间轴" Command="{x:Bind ViewModel.ExitViewerModeCommand}" />
 
                             <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Text="{x:Bind ViewModel.SelectedTitle, Mode=OneWay}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                <TextBlock Text="{x:Bind ViewModel.SelectedTitle, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
                                 <TextBlock Text="{x:Bind ViewModel.SelectedPositionText, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" />
                             </StackPanel>
 
                             <Button Grid.Column="2" Style="{StaticResource ChromeButtonStyle}" Content="上一张" Command="{x:Bind ViewModel.GoToPreviousAssetCommand}" IsEnabled="{x:Bind ViewModel.CanGoPrevious, Mode=OneWay}" />
                             <Button Grid.Column="3" Style="{StaticResource ChromeButtonStyle}" Content="下一张" Command="{x:Bind ViewModel.GoToNextAssetCommand}" IsEnabled="{x:Bind ViewModel.CanGoNext, Mode=OneWay}" />
                             <Button Grid.Column="4" Style="{StaticResource ChromeButtonStyle}" Content="适配" Click="OnZoomResetClick" />
-                            <Border Grid.Column="5" Padding="12,8" CornerRadius="12" Background="{StaticResource ShellPanelMutedBrush}" BorderBrush="{StaticResource ShellStrokeBrush}" BorderThickness="1">
+                            <Border Grid.Column="5" Padding="10,6" CornerRadius="10" Background="{StaticResource ShellPanelMutedBrush}" BorderBrush="{StaticResource ShellStrokeBrush}" BorderThickness="1">
                                 <TextBlock Text="{x:Bind ViewModel.ZoomFactorText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" FontWeight="SemiBold" />
                             </Border>
                         </Grid>
 
-                        <Border Grid.Row="1" Margin="18,0,18,18" Padding="16" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelAltBrush}">
+                        <Border Grid.Row="1" Margin="14,0,14,14" Padding="12" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelAltBrush}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
-                                <Grid ColumnSpacing="8" Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock Text="{x:Bind ViewModel.SelectedStatusSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" VerticalAlignment="Center" />
-                                    <Button Grid.Column="1" Style="{StaticResource ChromeButtonStyle}" Content="缩小" Click="OnZoomOutClick" />
-                                    <Button Grid.Column="2" Style="{StaticResource ChromeButtonStyle}" Content="放大" Click="OnZoomInClick" />
-                                </Grid>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,0,0,8">
+                                    <Button Style="{StaticResource ChromeButtonStyle}" Content="缩小" Click="OnZoomOutClick" />
+                                    <Button Style="{StaticResource ChromeButtonStyle}" Content="放大" Click="OnZoomInClick" />
+                                </StackPanel>
 
                                 <Grid Grid.Row="1">
                                     <MediaPlayerElement x:Name="ViewerMediaHost" AreTransportControlsEnabled="True" AutoPlay="False" Visibility="{x:Bind ViewModel.VideoVisibility, Mode=OneWay}" />
 
                                     <ScrollViewer x:Name="ViewerScrollHost" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" ZoomMode="Enabled" MinZoomFactor="0.25" MaxZoomFactor="4" ViewChanged="OnViewerScrollChanged" DoubleTapped="OnViewerDoubleTapped" PointerWheelChanged="OnViewerPointerWheelChanged" PointerPressed="OnViewerPointerPressed" PointerMoved="OnViewerPointerMoved" PointerReleased="OnViewerPointerReleased" PointerCanceled="OnViewerPointerCanceled" Visibility="{x:Bind ViewModel.PreviewImageVisibility, Mode=OneWay}">
-                                        <Image Stretch="Uniform" Source="{x:Bind ViewModel.SelectedPreviewSource, Mode=OneWay}" ImageOpened="OnViewerImageOpened" ImageFailed="OnViewerImageFailed" />
+                                        <Image x:Name="ViewerImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind ViewModel.SelectedPreviewSource, Mode=OneWay}" ImageOpened="OnViewerImageOpened" ImageFailed="OnViewerImageFailed" />
                                     </ScrollViewer>
 
-                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="520" Visibility="{x:Bind ViewModel.PreviewFallbackVisibility, Mode=OneWay}">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="520" Visibility="{x:Bind ViewModel.PreviewFallbackVisibility, Mode=OneWay}">
                                         <TextBlock Text="{x:Bind ViewModel.SelectedPreviewFallbackTitle, Mode=OneWay}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" TextAlignment="Center" />
                                         <TextBlock Text="{x:Bind ViewModel.SelectedPreviewFallbackDescription, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
                                         <TextBlock Text="{x:Bind ViewModel.SelectedPath, Mode=OneWay}" Foreground="{StaticResource ShellFaintTextBrush}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
@@ -375,7 +347,7 @@
                 </Border>
             </Grid>
 
-            <Border x:Name="DetailHost" Grid.Row="1" Grid.Column="2" Width="332" Style="{StaticResource PanelBorderStyle}" Padding="0">
+            <Border x:Name="DetailHost" Grid.Row="1" Grid.Column="2" Width="292" Style="{StaticResource PanelBorderStyle}" Padding="0">
                 <Grid>
                     <Grid Visibility="{x:Bind ViewModel.DetailExpandedVisibility, Mode=OneWay}">
                         <Grid.RowDefinitions>
@@ -383,85 +355,55 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Padding="16,14,16,12" ColumnSpacing="10">
+                        <Grid Padding="12,10,12,8" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Spacing="2">
-                                <TextBlock Text="详情" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
-                                <TextBlock Text="当前资源的拍摄与文件信息" Foreground="{StaticResource ShellSubtleTextBrush}" />
+                                <TextBlock Text="详情" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
+                                <TextBlock Text="拍摄与文件信息" Foreground="{StaticResource ShellSubtleTextBrush}" />
                             </StackPanel>
 
                             <Button Grid.Column="1" Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.DetailToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleDetailPanelCommand}" />
                         </Grid>
 
-                        <ScrollViewer Grid.Row="1" Padding="16,0,16,16" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Spacing="14">
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="当前作品" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedTitle, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedSubtitle, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                        <ScrollViewer Grid.Row="1" Padding="12,0,12,12" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="0">
+                                <StackPanel Spacing="6" Margin="0,0,0,10">
+                                    <TextBlock Text="拍摄概览" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedCaptureInfo, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedExposureInfo, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="查看状态" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedPositionText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedStatusSummary, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <Border Height="1" Background="{StaticResource ShellDividerBrush}" Margin="0,0,0,10" />
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="文件路径" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedPath, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Spacing="6" Margin="0,0,0,10">
+                                    <TextBlock Text="文件路径" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedPath, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="拍摄信息" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedCaptureInfo, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <Border Height="1" Background="{StaticResource ShellDividerBrush}" Margin="0,0,0,10" />
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="设备与曝光" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedExposureInfo, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Spacing="6" Margin="0,0,0,10">
+                                    <TextBlock Text="技术信息" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedTechnicalInfo, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="技术信息" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedTechnicalInfo, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <Border Height="1" Background="{StaticResource ShellDividerBrush}" Margin="0,0,0,10" />
 
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="位置与标签" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedLocationText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedTags, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="14">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="导入记录" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.SelectedImportedAtText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="位置、标签与导入" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedLocationText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedTags, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" TextWrapping="WrapWholeWords" />
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedImportedAtText, Mode=OneWay}" Foreground="{StaticResource ShellTextBrush}" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
 
-                    <StackPanel Visibility="{x:Bind ViewModel.DetailCollapsedVisibility, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Stretch" Spacing="12" Padding="8,14">
+                    <StackPanel Visibility="{x:Bind ViewModel.DetailCollapsedVisibility, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Stretch" Spacing="10" Padding="8,10">
                         <Button Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.DetailToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleDetailPanelCommand}" />
                         <TextBlock Text="详" Foreground="{StaticResource ShellFaintTextBrush}" />
                         <Border Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}" Padding="6">
@@ -481,7 +423,7 @@
                 </Grid>
             </Border>
 
-            <Border x:Name="FilmstripHost" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Height="164" Style="{StaticResource PanelBorderStyle}" Padding="0">
+            <Border x:Name="FilmstripHost" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Height="132" Style="{StaticResource PanelBorderStyle}" Padding="0">
                 <Grid>
                     <Border
                         Height="8"
@@ -500,23 +442,21 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Padding="16,12,16,10" ColumnSpacing="10">
+                        <Grid Padding="12,8,12,8" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Spacing="2">
-                                <TextBlock Text="胶卷" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
+                                <TextBlock Text="胶卷" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource ShellTextBrush}" />
                                 <TextBlock Text="{x:Bind ViewModel.SelectedPositionText, Mode=OneWay}" Foreground="{StaticResource ShellSubtleTextBrush}" />
                             </StackPanel>
 
-                            <Button Grid.Column="1" Style="{StaticResource ChromeButtonStyle}" Content="上一张" Command="{x:Bind ViewModel.GoToPreviousAssetCommand}" IsEnabled="{x:Bind ViewModel.CanGoPrevious, Mode=OneWay}" />
-                            <Button Grid.Column="2" Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.FilmstripToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFilmstripCommand}" />
+                            <Button Grid.Column="1" Style="{StaticResource EdgeButtonStyle}" Content="{x:Bind ViewModel.FilmstripToggleGlyph, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleFilmstripCommand}" />
                         </Grid>
 
-                        <ListView x:Name="FilmstripListView" Grid.Row="1" Margin="16,0,16,12" ItemsSource="{x:Bind ViewModel.FilmstripAssets, Mode=OneWay}" SelectedItem="{Binding ElementName=RootPage, Path=ViewModel.SelectedAsset, Mode=TwoWay}" IsItemClickEnabled="True" ItemClick="OnFilmstripAssetClick" SelectionChanged="OnFilmstripSelectionChanged" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListView x:Name="FilmstripListView" Grid.Row="1" Margin="12,0,12,10" ItemsSource="{x:Bind ViewModel.FilmstripAssets, Mode=OneWay}" SelectedItem="{Binding ElementName=RootPage, Path=ViewModel.SelectedAsset, Mode=TwoWay}" IsItemClickEnabled="True" ItemClick="OnFilmstripAssetClick" SelectionChanged="OnFilmstripSelectionChanged" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
                             <ListView.ItemContainerStyle>
                                 <Style TargetType="ListViewItem">
                                     <Setter Property="Padding" Value="0" />
@@ -532,10 +472,10 @@
                             </ListView.ItemsPanel>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="viewModels:AssetItemViewModel">
-                                    <Border Width="220" Height="92" Margin="0,0,10,0" Padding="10" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}">
+                                    <Border Width="184" Height="76" Margin="0,0,8,0" Padding="8" Style="{StaticResource PanelBorderStyle}" Background="{StaticResource ShellPanelMutedBrush}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="72" />
+                                                <ColumnDefinition Width="56" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
 
@@ -552,9 +492,9 @@
                                                 </Border>
                                             </Grid>
 
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="4">
-                                                <TextBlock Text="{x:Bind Title}" Foreground="{StaticResource ShellTextBrush}" FontWeight="SemiBold" MaxLines="2" TextWrapping="WrapWholeWords" />
-                                                <TextBlock Text="{x:Bind Subtitle}" Foreground="{StaticResource ShellSubtleTextBrush}" TextTrimming="CharacterEllipsis" />
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="{x:Bind Title}" Foreground="{StaticResource ShellTextBrush}" FontWeight="SemiBold" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{x:Bind Subtitle}" Foreground="{StaticResource ShellSubtleTextBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -563,7 +503,7 @@
                         </ListView>
                     </Grid>
 
-                    <Grid Visibility="{x:Bind ViewModel.FilmstripCollapsedVisibility, Mode=OneWay}" Padding="16,8">
+                    <Grid Visibility="{x:Bind ViewModel.FilmstripCollapsedVisibility, Mode=OneWay}" Padding="12,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />

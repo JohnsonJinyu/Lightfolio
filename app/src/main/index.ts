@@ -337,6 +337,12 @@ async function dedupeImportPaths(paths: string[]) {
 }
 
 function createMainWindow() {
+  const iconPath = path.join(
+    app.isPackaged ? process.resourcesPath : app.getAppPath(),
+    'resources',
+    process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  );
+
   const window = new BrowserWindow({
     width: 1460,
     height: 920,
@@ -351,6 +357,7 @@ function createMainWindow() {
     },
     backgroundMaterial: process.platform === 'win32' ? 'acrylic' : 'auto',
     autoHideMenuBar: true,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),
       sandbox: false,

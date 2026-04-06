@@ -14,18 +14,18 @@ namespace Lightfolio.WinUI.Views;
 
 public sealed partial class ShellPage : Page
 {
-    private const double ExpandedSidebarWidth = 296;
+    private const double ExpandedSidebarWidth = 256;
     private const double CollapsedSidebarWidth = 60;
-    private const double MinSidebarWidth = 240;
-    private const double MaxSidebarWidth = 420;
-    private const double ExpandedDetailWidth = 332;
+    private const double MinSidebarWidth = 216;
+    private const double MaxSidebarWidth = 360;
+    private const double ExpandedDetailWidth = 292;
     private const double CollapsedDetailWidth = 60;
-    private const double MinDetailWidth = 280;
-    private const double MaxDetailWidth = 460;
-    private const double ExpandedFilmstripHeight = 164;
+    private const double MinDetailWidth = 252;
+    private const double MaxDetailWidth = 380;
+    private const double ExpandedFilmstripHeight = 132;
     private const double CollapsedFilmstripHeight = 44;
-    private const double MinFilmstripHeight = 120;
-    private const double MaxFilmstripHeight = 260;
+    private const double MinFilmstripHeight = 96;
+    private const double MaxFilmstripHeight = 200;
     private const int PanelAnimationDurationMs = 220;
     private const float MinZoomFactor = 0.25f;
     private const float MaxZoomFactor = 4.0f;
@@ -99,6 +99,7 @@ public sealed partial class ShellPage : Page
     private void OnViewerImageOpened(object sender, RoutedEventArgs e)
     {
         ViewModel.HandlePreviewOpened();
+        ResetZoom();
     }
 
     private void OnViewerImageFailed(object sender, ExceptionRoutedEventArgs e)
@@ -550,8 +551,34 @@ public sealed partial class ShellPage : Page
 
     private void ResetZoom()
     {
-        ViewerScrollHost.ChangeView(null, null, 1.0f, disableAnimation: false);
-        ViewModel.UpdateZoomFactor(1.0f);
+        var fitZoom = CalculateFitZoomFactor();
+        ViewerScrollHost.ChangeView(0, 0, fitZoom, disableAnimation: false);
+        ViewModel.UpdateZoomFactor(fitZoom);
         _isDraggingPreview = false;
+    }
+
+    private float CalculateFitZoomFactor()
+    {
+        var source = ViewModel.SelectedPreviewSource;
+        if (source is null)
+        {
+            return 1.0f;
+        }
+
+        var pixelWidth = source.PixelWidth > 0 ? source.PixelWidth : (int)Math.Round(ViewerImage.ActualWidth);
+        var pixelHeight = source.PixelHeight > 0 ? source.PixelHeight : (int)Math.Round(ViewerImage.ActualHeight);
+        var viewportWidth = ViewerScrollHost.ActualWidth;
+        var viewportHeight = ViewerScrollHost.ActualHeight;
+
+        if (pixelWidth <= 0 || pixelHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0)
+        {
+            return 1.0f;
+        }
+
+        var horizontalZoom = viewportWidth / pixelWidth;
+        var verticalZoom = viewportHeight / pixelHeight;
+        var fitZoom = Math.Min(horizontalZoom, verticalZoom);
+
+        return (float)Math.Clamp(fitZoom, MinZoomFactor, 1.0);
     }
 }
